@@ -459,6 +459,14 @@ export async function runBusinessResearch(
         renderJs: false,
       });
       if (fetched.markdown) source.snippet = fetched.markdown;
+      visualEvidence.push(
+        ...fetched.images.map((image) => ({
+          title: image.alt || source.title,
+          url: image.url,
+          snippet: `Image discovered on ${source.url}`,
+          type: "image" as const,
+        })),
+      );
       await callTool(ctx, "trace.emit", {
         jobId: args.jobId,
         taskId: args.taskId,
@@ -536,7 +544,9 @@ export async function runBusinessResearch(
   const data = sanitizeOutput(llm.data, sources, searches.length);
   (
     data as BusinessResearchOutput & { visualEvidence: typeof visualEvidence }
-  ).visualEvidence = visualEvidence;
+  ).visualEvidence = [
+    ...new Map(visualEvidence.map((image) => [image.url, image])).values(),
+  ].slice(0, 20);
   const citations: CitationToPersist[] = data.facts.flatMap((fact) =>
     fact.sourceUrls.map((sourceUrl) => {
       const source = sources.find((candidate) => candidate.url === sourceUrl);

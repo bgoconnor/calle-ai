@@ -202,11 +202,26 @@ export const runSpecialist = internalAction({
               ?.data?.visualEvidence?.map((image: any) => image.url)
               .filter(Boolean) ?? [])
           : [];
-    // One inaccessible image fails an entire vision call. Drop known gated
-    // map thumbnails while retaining menu and visual-brand evidence.
-    const visionSafe = (url: string) =>
-      /^https?:\/\//i.test(url) &&
-      !/maps\.googleapis\.com|staticmap/i.test(url);
+    // One inaccessible or non-raster asset fails an entire vision call.
+    const visionSafe = (url: string) => {
+      if (
+        !/^https?:\/\//i.test(url) ||
+        /maps\.googleapis\.com|staticmap|doubleclick|googlesyndication|\.svg(?:\?|$)/i.test(
+          url,
+        )
+      )
+        return false;
+      try {
+        const parsed = new URL(url);
+        return (
+          /\.(?:png|jpe?g|webp|gif)$/i.test(parsed.pathname) ||
+          (parsed.hostname === "res.cloudinary.com" &&
+            parsed.pathname.includes("/image/upload/"))
+        );
+      } catch {
+        return false;
+      }
+    };
     const images = roleDef.usesVision
       ? ([...new Set([...discoveredImages, ...ownerImages])]
           .filter(visionSafe)

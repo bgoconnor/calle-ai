@@ -258,14 +258,105 @@ export const ROLES: Record<string, RoleDef> = {
     buildUser: (a) =>
       `Compose the bilingual microsite from the approved artifacts. slug must be "${a.business?.slug}".\n\n${context(a)}`,
   },
+
+  gbp_pack: {
+    name: "Google Business Profile Pack",
+    artifactKind: "gbp_pack",
+    outputName: "gbp_pack",
+    system:
+      "You produce a Google Business Profile improvement pack from the approved artifacts: " +
+      "a bilingual business description, a primary category, additional categories, attributes, " +
+      "recommended posts (bilingual), photo recommendations, and listing gaps to fix. Use ONLY " +
+      "facts supported by the prior artifacts — never invent hours, prices, or attributes.",
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "businessDescription",
+        "primaryCategory",
+        "additionalCategories",
+        "attributes",
+        "recommendedPosts",
+        "photoRecommendations",
+        "listingGaps",
+      ],
+      properties: {
+        businessDescription: bilingual,
+        primaryCategory: { type: "string" },
+        additionalCategories: { type: "array", items: { type: "string" } },
+        attributes: { type: "array", items: { type: "string" } },
+        recommendedPosts: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["title", "body"],
+            properties: { title: { type: "string" }, body: bilingual },
+          },
+        },
+        photoRecommendations: { type: "array", items: { type: "string" } },
+        listingGaps: { type: "array", items: { type: "string" } },
+      },
+    },
+    buildUser: (a) =>
+      `Produce the Google Business Profile improvement pack.\n\n${context(a)}`,
+  },
+
+  delivery_report: {
+    name: "Delivery Report",
+    artifactKind: "delivery_report",
+    outputName: "delivery_report",
+    system:
+      "You are the agency producing a delivery report for the operator. Summarize what was " +
+      "delivered, give per-item confidence flags, and list open issues — grounded ONLY in the " +
+      "artifacts actually produced this run. Do not overclaim or invent published URLs.",
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["summary", "deliverables", "confidenceFlags", "openIssues"],
+      properties: {
+        summary: { type: "string" },
+        deliverables: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["name", "status", "note"],
+            properties: {
+              name: { type: "string" },
+              status: { type: "string" },
+              note: { type: "string" },
+            },
+          },
+        },
+        confidenceFlags: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["item", "confidence", "note"],
+            properties: {
+              item: { type: "string" },
+              confidence: { type: "number" },
+              note: { type: "string" },
+            },
+          },
+        },
+        openIssues: { type: "array", items: { type: "string" } },
+      },
+    },
+    buildUser: (a) =>
+      `Write the agency delivery report for this run.\n\n${context(a)}`,
+  },
 };
 
-// Default fixed sequence (walking skeleton). The Manager will replace this with
-// a per-job dynamic plan next.
-export const DEFAULT_SEQUENCE = [
+// The Manager dynamically plans the CONTENT roles below; the orchestrator always
+// appends the fixed publishing tail (publisher_qa → gbp_pack → delivery_report)
+// so every completed job produces all four deliverables in a reliable order.
+export const CONTENT_ROLES = [
   "intake",
   "menu_structuring",
   "localization",
   "discovery",
-  "publisher_qa",
 ];
+export const PUBLISH_TAIL = ["publisher_qa", "gbp_pack", "delivery_report"];

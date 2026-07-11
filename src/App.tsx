@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { AgencyIntake } from "./features/intake";
+import { AgencyIntake, QuickIntake } from "./features/intake";
 import { ControlRoom, mockControlRoomAdapter } from "./features/control-room";
 import { platformConfig } from "./lib/platform";
 import { PublicSiteRoute } from "./public/PublicSiteRoute";
 import "./app.css";
 
 type Route =
-  | { kind: "intake" }
+  | { kind: "quick" }
+  | { kind: "advanced" }
   | { kind: "control"; jobId?: string }
   | { kind: "site"; slug: string };
 
@@ -17,7 +18,8 @@ function readRoute(): Route {
   const job = path.match(/^\/jobs\/([^/]+)$/);
   if (job) return { kind: "control", jobId: decodeURIComponent(job[1]) };
   if (path === "/jobs") return { kind: "control" };
-  return { kind: "intake" };
+  if (path === "/advanced") return { kind: "advanced" };
+  return { kind: "quick" };
 }
 
 export function App() {
@@ -44,13 +46,18 @@ export function App() {
           <span>Calle</span> AI
         </button>
         <nav aria-label="Agency navigation">
-          <button className={route.kind === "intake" ? "active" : ""} onClick={() => navigate("/")}>New job</button>
+          <button className={route.kind === "quick" || route.kind === "advanced" ? "active" : ""} onClick={() => navigate("/")}>New job</button>
           <button className={route.kind === "control" ? "active" : ""} onClick={() => navigate("/jobs")}>Control room</button>
           <a href="/b/yucatasia">Demo storefront ↗</a>
         </nav>
       </header>
 
-      {route.kind === "intake" ? (
+      {route.kind === "quick" ? (
+        <QuickIntake
+          onAdvanced={() => navigate("/advanced")}
+          onLaunched={({ jobId }) => navigate(`/jobs/${jobId}`)}
+        />
+      ) : route.kind === "advanced" ? (
         <AgencyIntake
           integrationWorkerUrl={platformConfig.integrationWorkerUrl}
           onLaunched={({ jobId }) => navigate(`/jobs/${jobId}`)}

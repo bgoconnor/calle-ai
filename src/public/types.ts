@@ -60,4 +60,11 @@ export type PublishedSite = {
   guide?: { title: LocalizedText; body: LocalizedText; picks: string[] };
   faqs: Array<{ question: LocalizedText; answer: LocalizedText }>;
   conceptLabel?: string;
+  customPage?: {
+    contractVersion: "custom-microsite.v1";
+    designRationale: string;
+    html: string;
+    css: string;
+    contentManifest: { menuItemIds: string[]; sourceArtifactIds: string[] };
+  };
 };

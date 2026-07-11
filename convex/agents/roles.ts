@@ -442,6 +442,37 @@ export const ROLES: Record<string, RoleDef> = {
     buildUser: (a) => `Research local-discovery context.\n\n${context(a)}`,
   },
 
+  creative_direction: {
+    name: "Brand & Web Design Director",
+    artifactKind: "creative_brief",
+    outputName: "creative_brief",
+    usesVision: true,
+    system:
+      "Study verified facts, menu language, reviews, and every supplied visual. Translate observed typography, illustration, materials, photography, signage, and ephemera into a specific prompt for a senior web designer. " +
+      "Capture the felt vibe without inventing heritage, history, clientele, or cuisine. Separate observed signals from creative interpretation. " +
+      "Specify a surprising but usable visual thesis, typography attitude, composition, rhythm, menu treatment, image behavior, color logic, and clichés to avoid. The designPrompt must invite an original responsive website, not a template skin.",
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "evidenceSignals",
+        "vibe",
+        "visualThesis",
+        "designPrompt",
+        "avoid",
+      ],
+      properties: {
+        evidenceSignals: { type: "array", items: { type: "string" } },
+        vibe: { type: "string" },
+        visualThesis: { type: "string" },
+        designPrompt: { type: "string" },
+        avoid: { type: "array", items: { type: "string" } },
+      },
+    },
+    buildUser: (a) =>
+      `Write a bespoke web-design prompt from the observed character of this business. Make the creative leap explicit while keeping factual claims constrained to evidence.\n\n${context(a)}`,
+  },
+
   // Canonical output contract: src/public/types.ts. Keep this schema and the
   // renderer type synchronized; public pages render artifact.data directly.
   publisher_qa: {
@@ -454,7 +485,9 @@ export const ROLES: Record<string, RoleDef> = {
       "Use ONLY facts/prices present in prior artifacts and only exact testimonial quotes with source URLs. " +
       "Never introduce new prices, claims, or quotes. Validate both languages and the comprehensive menu. " +
       "Create a distinct brand direction from verified business evidence: choose a restrained accessible palette, personality, image treatment, menu density, and short bilingual display copy. " +
-      "Do not infer a regional cuisine, heritage, mood, or visual trope from the name alone. Avoid generic restaurant clichés. Keep the menu highly legible.",
+      "Do not infer a regional cuisine, heritage, mood, or visual trope from the name alone. Avoid generic restaurant clichés. Keep the menu highly legible. " +
+      "Follow the creative_brief designPrompt and hand-design custom semantic HTML and CSS rather than reusing the Calle composition. Scripts, event handlers, forms, iframes, objects, and javascript URLs are forbidden. " +
+      "Use data-lang=es and data-lang=en for language-specific elements. Put data-menu-item-id on exactly one element per normalized menu item. CSS must be self-contained and responsive from 360px upward with no @import.",
     outputSchema: {
       type: "object",
       additionalProperties: false,
@@ -470,6 +503,7 @@ export const ROLES: Record<string, RoleDef> = {
         "guide",
         "faqs",
         "conceptLabel",
+        "customPage",
       ],
       properties: {
         slug: { type: "string" },
@@ -510,6 +544,32 @@ export const ROLES: Record<string, RoleDef> = {
             },
             menuHeading: bilingual,
             sticker: bilingual,
+          },
+        },
+        customPage: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "contractVersion",
+            "designRationale",
+            "html",
+            "css",
+            "contentManifest",
+          ],
+          properties: {
+            contractVersion: { type: "string", enum: ["custom-microsite.v1"] },
+            designRationale: { type: "string" },
+            html: { type: "string" },
+            css: { type: "string" },
+            contentManifest: {
+              type: "object",
+              additionalProperties: false,
+              required: ["menuItemIds", "sourceArtifactIds"],
+              properties: {
+                menuItemIds: { type: "array", items: { type: "string" } },
+                sourceArtifactIds: { type: "array", items: { type: "string" } },
+              },
+            },
           },
         },
         business: {
@@ -618,7 +678,7 @@ export const ROLES: Record<string, RoleDef> = {
       },
     },
     buildUser: (a) =>
-      `Compose the bilingual microsite from the approved artifacts. slug must be "${a.business?.slug}". First determine an evidence-grounded brand personality and apply it consistently across palette, display copy, image treatment, and menu density. Give every section clear hierarchy and include every normalized item exactly once.\n\n${context(a)}`,
+      `Hand-design the bilingual microsite from the creative_brief and verified artifacts. slug must be "${a.business?.slug}". Treat the creative brief as a springboard: make original decisions about composition, typography, rhythm, section order, menu treatment, imagery, and decorative language. Include every normalized menu item exactly once and list those ids in contentManifest.menuItemIds.\n\n${context(a)}`,
   },
 
   gbp_pack: {
@@ -723,6 +783,7 @@ export const CONTENT_ROLES = [
   "menu_testimonials",
 ];
 export const PUBLISH_TAIL = [
+  "creative_direction",
   "pdf_menu",
   "publisher_qa",
   "gbp_pack",

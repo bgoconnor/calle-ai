@@ -24,7 +24,10 @@ export const runSpecialist = internalAction({
     role: v.string(),
     revisionNote: v.optional(v.string()),
   },
-  handler: async (ctx, { jobId, taskId, role, revisionNote }): Promise<SpecialistResult> => {
+  handler: async (
+    ctx,
+    { jobId, taskId, role, revisionNote },
+  ): Promise<SpecialistResult> => {
     const roleDef = ROLES[role];
     if (!roleDef) throw new Error(`unknown role: ${role}`);
     const start = Date.now();
@@ -35,58 +38,107 @@ export const runSpecialist = internalAction({
       ...(revisionNote ? { attempt: 2, reviewNote: revisionNote } : {}),
     });
 
-    const context: any = await ctx.runQuery(internal.agents.helpers.getJobContext, {
-      jobId,
-    });
+    const context: any = await ctx.runQuery(
+      internal.agents.helpers.getJobContext,
+      {
+        jobId,
+      },
+    );
     const priorArtifacts = context.artifacts.map((a: any) => ({
       kind: a.kind,
       data: a.data,
     }));
     if (role === "pdf_menu") {
       try {
-        const normalized = [...context.artifacts].reverse().find((a: any) => a.kind === "normalized_menu");
-        const bilingual = [...context.artifacts].reverse().find((a: any) => a.kind === "bilingual_content");
-        if (!normalized || !bilingual) throw new Error("PDF menu requires the latest normalized_menu and bilingual_content artifacts");
+        const normalized = [...context.artifacts]
+          .reverse()
+          .find((a: any) => a.kind === "normalized_menu");
+        const bilingual = [...context.artifacts]
+          .reverse()
+          .find((a: any) => a.kind === "bilingual_content");
+        if (!normalized || !bilingual)
+          throw new Error(
+            "PDF menu requires the latest normalized_menu and bilingual_content artifacts",
+          );
         const data = await callTool(ctx, "pdf_menu.generate", {
           normalizedMenuArtifactId: String(normalized._id),
           bilingualContentArtifactId: String(bilingual._id),
           normalizedMenu: normalized.data,
           bilingualContent: bilingual.data,
         });
-        const artifactId: Id<"artifacts"> = await ctx.runMutation(internal.agents.helpers.writeArtifact, {
-          jobId,
-          businessId: context.job.businessId,
-          kind: roleDef.artifactKind,
-          data,
-          producedByRole: roleDef.name,
-          taskId,
-          confidence: data.warnings.length ? 0.8 : 1,
-        });
+        const artifactId: Id<"artifacts"> = await ctx.runMutation(
+          internal.agents.helpers.writeArtifact,
+          {
+            jobId,
+            businessId: context.job.businessId,
+            kind: roleDef.artifactKind,
+            data,
+            producedByRole: roleDef.name,
+            taskId,
+            confidence: data.warnings.length ? 0.8 : 1,
+          },
+        );
         const durationMs = Date.now() - start;
-        await ctx.runMutation(internal.agents.helpers.updateTask, { taskId, status: "succeeded", outputArtifactId: artifactId, durationMs });
+        await ctx.runMutation(internal.agents.helpers.updateTask, {
+          taskId,
+          status: "succeeded",
+          outputArtifactId: artifactId,
+          durationMs,
+        });
         await callTool(ctx, "trace.emit", {
-          jobId, taskId, parentRole: "Agency Manager", role: roleDef.name, phase: "tool_call",
+          jobId,
+          taskId,
+          parentRole: "Agency Manager",
+          role: roleDef.name,
+          phase: "tool_call",
           summary: `Rendered ${data.itemCount} supported items into a ${data.pageCount}-page PDF menu`,
-          toolName: "pdf_menu.generate", durationMs,
+          toolName: "pdf_menu.generate",
+          durationMs,
           input: { sourceArtifactIds: data.sourceArtifactIds },
-          output: { artifactId, pageCount: data.pageCount, itemCount: data.itemCount, warnings: data.warnings },
+          output: {
+            artifactId,
+            pageCount: data.pageCount,
+            itemCount: data.itemCount,
+            warnings: data.warnings,
+          },
         });
         return { status: "succeeded", artifactId };
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
-        await ctx.runMutation(internal.agents.helpers.updateTask, { taskId, status: "failed", blockerReason: message, durationMs: Date.now() - start });
-        await callTool(ctx, "trace.emit", { jobId, taskId, role: roleDef.name, phase: "error", summary: `${roleDef.name} failed: ${message}` });
+        await ctx.runMutation(internal.agents.helpers.updateTask, {
+          taskId,
+          status: "failed",
+          blockerReason: message,
+          durationMs: Date.now() - start,
+        });
+        await callTool(ctx, "trace.emit", {
+          jobId,
+          taskId,
+          role: roleDef.name,
+          phase: "error",
+          summary: `${roleDef.name} failed: ${message}`,
+        });
         return { status: "failed", error: message };
       }
     }
     if (role === "publisher_qa") {
-      const normalizedMenu = [...context.artifacts].reverse().find((a: any) => a.kind === "normalized_menu")?.data;
-      const testimonials = [...context.artifacts].reverse().find((a: any) => a.kind === "menu_testimonials")?.data;
-      const menuSources = [...context.artifacts].reverse().find((a: any) => a.kind === "menu_sources")?.data;
+      const normalizedMenu = [...context.artifacts]
+        .reverse()
+        .find((a: any) => a.kind === "normalized_menu")?.data;
+      const testimonials = [...context.artifacts]
+        .reverse()
+        .find((a: any) => a.kind === "menu_testimonials")?.data;
+      const menuSources = [...context.artifacts]
+        .reverse()
+        .find((a: any) => a.kind === "menu_sources")?.data;
       if (normalizedMenu) {
         priorArtifacts.push({
           kind: "menu_generator_input",
-          data: prepareMenuGeneratorHandoff(normalizedMenu, testimonials, menuSources),
+          data: prepareMenuGeneratorHandoff(
+            normalizedMenu,
+            testimonials,
+            menuSources,
+          ),
         });
       }
     }
@@ -131,20 +183,30 @@ export const runSpecialist = internalAction({
 
     // Vision: pass menu/service photo URLs when the role reads images.
     const ownerImages = context.assets
-          .filter(
-            (a: any) =>
-              (a.kind === "menu_photo" || a.kind === "service_list") && a.url,
-          )
-          .map((a: any) => a.url as string);
-    const discoveredImages = role === "menu_normalization"
-      ? [...context.artifacts].reverse().find((artifact: any) => artifact.kind === "menu_sources")?.data?.imageEvidence
-          ?.map((image: any) => image.url).filter(Boolean) ?? []
-      : [];
-    // OpenAI vision must be able to download each URL, and one bad URL fails
-    // the entire call. Drop gated/non-image URLs (e.g. Google Maps static-map
-    // thumbnails that Linkup returns as "image" results and that 400).
+      .filter(
+        (a: any) =>
+          (a.kind === "menu_photo" || a.kind === "service_list") && a.url,
+      )
+      .map((a: any) => a.url as string);
+    const discoveredImages =
+      role === "menu_normalization"
+        ? ([...context.artifacts]
+            .reverse()
+            .find((artifact: any) => artifact.kind === "menu_sources")
+            ?.data?.imageEvidence?.map((image: any) => image.url)
+            .filter(Boolean) ?? [])
+        : role === "creative_direction"
+          ? ([...context.artifacts]
+              .reverse()
+              .find((artifact: any) => artifact.kind === "business_facts")
+              ?.data?.visualEvidence?.map((image: any) => image.url)
+              .filter(Boolean) ?? [])
+          : [];
+    // One inaccessible image fails an entire vision call. Drop known gated
+    // map thumbnails while retaining menu and visual-brand evidence.
     const visionSafe = (url: string) =>
-      /^https?:\/\//i.test(url) && !/maps\.googleapis\.com|staticmap/i.test(url);
+      /^https?:\/\//i.test(url) &&
+      !/maps\.googleapis\.com|staticmap/i.test(url);
     const images = roleDef.usesVision
       ? ([...new Set([...discoveredImages, ...ownerImages])]
           .filter(visionSafe)
@@ -152,41 +214,93 @@ export const runSpecialist = internalAction({
       : undefined;
 
     try {
-      const toolRole = role === "intake"
-        ? await runBusinessResearch(ctx, {
-            jobId,
-            taskId,
-            businessId: context.job.businessId,
-            context: { business: context.business, artifacts: context.artifacts },
-          })
-        : role === "menu_discovery"
-        ? await runMenuDiscovery(ctx, {
-            jobId,
-            taskId,
-            businessId: context.job.businessId,
-            context: { business: context.business, artifacts: context.artifacts },
-          })
-        : role === "menu_testimonials"
-          ? await runMenuTestimonials(ctx, {
+      const toolRole =
+        role === "intake"
+          ? await runBusinessResearch(ctx, {
               jobId,
               taskId,
               businessId: context.job.businessId,
-              context: { business: context.business, artifacts: context.artifacts },
+              context: {
+                business: context.business,
+                artifacts: context.artifacts,
+              },
             })
-          : null;
+          : role === "menu_discovery"
+            ? await runMenuDiscovery(ctx, {
+                jobId,
+                taskId,
+                businessId: context.job.businessId,
+                context: {
+                  business: context.business,
+                  artifacts: context.artifacts,
+                },
+              })
+            : role === "menu_testimonials"
+              ? await runMenuTestimonials(ctx, {
+                  jobId,
+                  taskId,
+                  businessId: context.job.businessId,
+                  context: {
+                    business: context.business,
+                    artifacts: context.artifacts,
+                  },
+                })
+              : null;
 
-      const llm = toolRole ?? await callStructured({
-        system: roleDef.system,
-        user: roleDef.buildUser({
-          business: context.business,
-          policies: context.policies,
-          priorArtifacts,
-          revisionNote,
-        }),
-        schemaName: roleDef.outputName,
-        schema: roleDef.outputSchema,
-        images,
-      });
+      const llm =
+        toolRole ??
+        (await callStructured({
+          system: roleDef.system,
+          user: roleDef.buildUser({
+            business: context.business,
+            policies: context.policies,
+            priorArtifacts,
+            revisionNote,
+          }),
+          schemaName: roleDef.outputName,
+          schema: roleDef.outputSchema,
+          images,
+        }));
+
+      if (role === "publisher_qa") {
+        const page = (llm.data as any)?.customPage;
+        const normalized = [...context.artifacts]
+          .reverse()
+          .find((artifact: any) => artifact.kind === "normalized_menu")?.data;
+        const expectedIds = (normalized?.sections ?? [])
+          .flatMap((section: any) =>
+            (section.items ?? []).map((item: any) => String(item.id)),
+          )
+          .sort();
+        const manifestIds = [...(page?.contentManifest?.menuItemIds ?? [])]
+          .map(String)
+          .sort();
+        const forbidden =
+          /<\s*(script|iframe|object|embed|form)\b|\son\w+\s*=|javascript\s*:|@import/i.test(
+            `${page?.html ?? ""}\n${page?.css ?? ""}`,
+          );
+        const occurrencesValid = expectedIds.every(
+          (id: string) =>
+            (
+              (page?.html ?? "").match(
+                new RegExp(
+                  `data-menu-item-id=["']${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']`,
+                  "g",
+                ),
+              ) ?? []
+            ).length === 1,
+        );
+        if (
+          !page ||
+          forbidden ||
+          JSON.stringify(expectedIds) !== JSON.stringify(manifestIds) ||
+          !occurrencesValid
+        ) {
+          throw new Error(
+            "Custom microsite failed safety or menu-completeness validation",
+          );
+        }
+      }
 
       const artifactId: Id<"artifacts"> = await ctx.runMutation(
         internal.agents.helpers.writeArtifact,

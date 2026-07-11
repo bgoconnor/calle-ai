@@ -1,5 +1,42 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap");
 
+.custom-site-shell {
+  min-height: 100vh;
+  background: #fff;
+}
+.custom-site-controls {
+  height: 54px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 18px;
+  border-bottom: 1px solid #ddd;
+  background: #fff;
+  font:
+    600 13px Inter,
+    system-ui,
+    sans-serif;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.custom-site-shell iframe {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 54px);
+  min-height: 760px;
+  border: 0;
+  background: #fff;
+}
+.custom-site-controls .language-switch {
+  background: #fff;
+}
+.custom-site-controls .language-switch button.active {
+  background: #181818;
+  color: #fff;
+}
+
 .public-site {
   --ink: #18241e;
   --paper: #f9efda;
@@ -165,9 +202,15 @@ footer span {
   border: 2px solid var(--ink);
   filter: saturate(1.1);
 }
-.treatment-rounded .hero-image { border-radius: 36px; }
-.treatment-editorial .hero-image { border-radius: 4px; }
-.treatment-organic .hero-image { border-radius: 42% 58% 44% 56% / 56% 40% 60% 44%; }
+.treatment-rounded .hero-image {
+  border-radius: 36px;
+}
+.treatment-editorial .hero-image {
+  border-radius: 4px;
+}
+.treatment-organic .hero-image {
+  border-radius: 42% 58% 44% 56% / 56% 40% 60% 44%;
+}
 .chelys .hero-image {
   border-radius: 34px 150px 34px 150px;
 }
@@ -270,8 +313,12 @@ footer span {
   padding: 19px 0;
   border-top: 1px solid var(--line);
 }
-.density-compact .catalog-item { padding: 12px 0; }
-.density-airy .catalog-item { padding: 25px 0; }
+.density-compact .catalog-item {
+  padding: 12px 0;
+}
+.density-airy .catalog-item {
+  padding: 25px 0;
+}
 .item-title {
   display: flex;
   justify-content: space-between;

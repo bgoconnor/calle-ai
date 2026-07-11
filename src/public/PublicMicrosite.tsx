@@ -8,7 +8,58 @@ type Props = { site: PublishedSite };
 type Language = "es" | "en";
 const t = (value: LocalizedText, lang: Language) => value[lang];
 
+function safeCustomDocument(site: PublishedSite, lang: Language) {
+  const page = site.customPage;
+  if (!page) return "";
+  const html = page.html
+    .replace(/<\/?(?:html|head|body)[^>]*>/gi, "")
+    .replace(
+      /<(?:script|iframe|object|embed|form|style)\b[\s\S]*?<\/(?:script|iframe|object|embed|form|style)>/gi,
+      "",
+    )
+    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/javascript\s*:/gi, "");
+  const css = page.css
+    .replace(/@import[^;]+;/gi, "")
+    .replace(/javascript\s*:/gi, "")
+    .replace(/<\/style/gi, "");
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;min-height:100%}[data-language="es"] [data-lang="en"],[data-language="en"] [data-lang="es"]{display:none!important}${css}</style></head><body><div data-language="${lang}">${html}</div></body></html>`;
+}
+
+function CustomMicrosite({ site }: Props) {
+  const [lang, setLang] = useState<Language>("es");
+  return (
+    <main className="custom-site-shell">
+      <div className="custom-site-controls">
+        <strong>{site.business.name}</strong>
+        <div className="language-switch">
+          <button
+            className={lang === "es" ? "active" : ""}
+            onClick={() => setLang("es")}
+          >
+            ES
+          </button>
+          <button
+            className={lang === "en" ? "active" : ""}
+            onClick={() => setLang("en")}
+          >
+            EN
+          </button>
+        </div>
+      </div>
+      <iframe
+        key={lang}
+        title={`${site.business.name} website`}
+        sandbox="allow-popups"
+        srcDoc={safeCustomDocument(site, lang)}
+      />
+    </main>
+  );
+}
+
 export function PublicMicrosite({ site }: Props) {
+  if (site.customPage?.contractVersion === "custom-microsite.v1")
+    return <CustomMicrosite site={site} />;
   const [lang, setLang] = useState<Language>("es");
   const [openTestimonial, setOpenTestimonial] = useState<string | null>(null);
   const isRestaurant = site.kind === "restaurant";

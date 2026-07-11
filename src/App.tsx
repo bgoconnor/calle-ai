@@ -4,12 +4,14 @@ import { ControlRoom, mockControlRoomAdapter } from "./features/control-room";
 import { platformConfig } from "./lib/platform";
 import { ConnectedPublicSite } from "./public/ConnectedPublicSite";
 import { createLiveControlAdapter, createLiveIntakeAdapter } from "./lib/liveAgency";
+import { MenuEvalLab } from "./features/evals";
 import "./app.css";
 
 type Route =
   | { kind: "quick" }
   | { kind: "advanced" }
   | { kind: "control"; jobId?: string }
+  | { kind: "evals" }
   | { kind: "site"; slug: string };
 
 function readRoute(): Route {
@@ -20,6 +22,7 @@ function readRoute(): Route {
   if (job) return { kind: "control", jobId: decodeURIComponent(job[1]) };
   if (path === "/jobs") return { kind: "control" };
   if (path === "/advanced") return { kind: "advanced" };
+  if (path === "/evals") return { kind: "evals" };
   return { kind: "quick" };
 }
 
@@ -51,6 +54,7 @@ export function App() {
         <nav aria-label="Agency navigation">
           <button className={route.kind === "quick" || route.kind === "advanced" ? "active" : ""} onClick={() => navigate("/")}>New job</button>
           <button className={route.kind === "control" ? "active" : ""} onClick={() => navigate("/jobs")}>Control room</button>
+          <button className={route.kind === "evals" ? "active" : ""} onClick={() => navigate("/evals")}>Agent lab</button>
           <a href="/b/yucatasia">Demo storefront ↗</a>
         </nav>
       </header>
@@ -67,6 +71,8 @@ export function App() {
           integrationWorkerUrl={platformConfig.integrationWorkerUrl}
           onLaunched={({ jobId }) => navigate(`/jobs/${jobId}`)}
         />
+      ) : route.kind === "evals" ? (
+        <MenuEvalLab />
       ) : (
         <ControlRoom adapter={controlAdapter} initialJobId={route.jobId} />
       )}

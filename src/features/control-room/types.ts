@@ -16,7 +16,11 @@ export type ControlArtifact = {
   approvalStatus: ApprovalStatus; version: number; createdAt: number;
 };
 export type ControlCitation = { id: string; artifactId?: string; title: string; url: string; snippet: string; query: string; retrievedAt: number };
-export type ControlTrace = { id: string; taskId?: string; parentTaskId?: string; agent: string; event: string; inputSummary: string; outputSummary: string; tools: string[]; latencyMs: number; tokenEstimate: number; costUsd: number; createdAt: number };
+export type ControlTrace = {
+  id: string; taskId?: string; parentTaskId?: string; parentRole?: string;
+  agent: string; event: string; summary: string; inputSummary: string; outputSummary: string;
+  tools: string[]; model?: string; latencyMs: number; tokenEstimate: number; costUsd: number; createdAt: number;
+};
 export type ControlRoomDetail = { job: ControlJob; tasks: ControlTask[]; artifacts: ControlArtifact[]; citations: ControlCitation[]; traces: ControlTrace[]; siteVersionId?: string };
 
 export type ControlRoomAdapter = {

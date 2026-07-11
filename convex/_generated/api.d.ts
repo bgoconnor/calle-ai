@@ -9,12 +9,12 @@
  */
 
 import type * as agency from "../agency.js";
-import type * as http from "../http.js";
 import type * as agents_helpers from "../agents/helpers.js";
 import type * as agents_llm from "../agents/llm.js";
 import type * as agents_manager from "../agents/manager.js";
 import type * as agents_roles from "../agents/roles.js";
 import type * as agents_specialist from "../agents/specialist.js";
+import type * as http from "../http.js";
 import type * as jobs from "../jobs.js";
 import type * as orchestrator from "../orchestrator.js";
 import type * as seed from "../seed.js";
@@ -29,12 +29,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   agency: typeof agency;
-  http: typeof http;
   "agents/helpers": typeof agents_helpers;
   "agents/llm": typeof agents_llm;
   "agents/manager": typeof agents_manager;
   "agents/roles": typeof agents_roles;
   "agents/specialist": typeof agents_specialist;
+  http: typeof http;
   jobs: typeof jobs;
   orchestrator: typeof orchestrator;
   seed: typeof seed;

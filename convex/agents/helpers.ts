@@ -116,6 +116,7 @@ export const updateTask = internalMutation({
     taskId: v.id("tasks"),
     status: v.optional(taskStatus),
     outputArtifactId: v.optional(v.id("artifacts")),
+    inputArtifactIds: v.optional(v.array(v.id("artifacts"))),
     confidence: v.optional(v.number()),
     blockerReason: v.optional(v.string()),
     reviewNote: v.optional(v.string()),

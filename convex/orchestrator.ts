@@ -55,10 +55,20 @@ export const runJob = action({
       { jobId, rationale: plan.rationale, steps },
     );
 
+    // Track artifacts produced so far so each task records the handoff inputs it
+    // actually consumed — real provenance for the Control Room trace.
+    const producedArtifactIds: any[] = [];
+
     // 3. Execute each step; review + revise where applicable.
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
       const taskId = taskIds[i];
+
+      // Record which prior artifacts feed this step (the handoff).
+      await ctx.runMutation(internal.agents.helpers.updateTask, {
+        taskId,
+        inputArtifactIds: [...producedArtifactIds],
+      });
 
       if (step.role === "publisher_qa") {
         const context = await ctx.runQuery(internal.agents.helpers.getJobContext, { jobId });
@@ -128,6 +138,8 @@ export const runJob = action({
           }
         }
       }
+
+      if (res.artifactId) producedArtifactIds.push(res.artifactId);
     }
 
     const completedContext = await ctx.runQuery(internal.agents.helpers.getJobContext, { jobId });

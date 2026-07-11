@@ -20,6 +20,7 @@ export type ControlCitation = { id: string; artifactId?: string; title: string; 
 export type ControlTrace = {
   id: string; taskId?: string; parentTaskId?: string; parentRole?: string;
   agent: string; event: string; summary: string; inputSummary: string; outputSummary: string;
+  input?: unknown; output?: unknown;
   tools: string[]; model?: string; latencyMs: number; tokenEstimate: number; costUsd: number; createdAt: number;
 };
 export type ControlRoomDetail = { job: ControlJob; tasks: ControlTask[]; artifacts: ControlArtifact[]; citations: ControlCitation[]; traces: ControlTrace[]; siteVersionId?: string };

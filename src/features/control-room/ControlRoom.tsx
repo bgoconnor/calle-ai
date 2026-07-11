@@ -523,6 +523,31 @@ function TraceEvents({ events }: { events: ControlTrace[] }) {
                 .filter(Boolean)
                 .join(" · ") || "No provider metadata recorded"}
             </em>
+            {(event.input != null || event.output != null) && (
+              <details className="cr-event-io">
+                <summary>Inspect input / output</summary>
+                {event.input != null && (
+                  <>
+                    <small>Input</small>
+                    <pre style={{ overflowX: "auto", maxHeight: 240, fontSize: 11 }}>
+                      {typeof event.input === "string"
+                        ? event.input
+                        : JSON.stringify(event.input, null, 2)}
+                    </pre>
+                  </>
+                )}
+                {event.output != null && (
+                  <>
+                    <small>Output</small>
+                    <pre style={{ overflowX: "auto", maxHeight: 240, fontSize: 11 }}>
+                      {typeof event.output === "string"
+                        ? event.output
+                        : JSON.stringify(event.output, null, 2)}
+                    </pre>
+                  </>
+                )}
+              </details>
+            )}
           </div>
         </li>
       ))}

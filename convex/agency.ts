@@ -349,12 +349,19 @@ export const getControlRoomJob = query({
       ctx.db.query("deployments").withIndex("by_job", (q) => q.eq("jobId", jobId)).collect(),
     ]);
     const published = deployments.find((item) => item.status === "published");
+    const artifactKindById = new Map(artifacts.map((a) => [a._id, a.kind]));
+    // Forward stored trace payloads to the Control Room, truncating large ones.
+    const compact = (value: unknown) => {
+      if (value === undefined || value === null) return value;
+      const str = JSON.stringify(value);
+      return str.length > 4000 ? `${str.slice(0, 4000)}… (truncated)` : value;
+    };
     const managerEvents = traces.filter((item) => item.role === "Agency Manager");
     const managerTask = { id: `manager:${jobId}`, agent: "Agency Manager", title: "Plan, delegate, and review local-presence job", status: managerTaskStatus(job.status), tools: [...new Set(managerEvents.flatMap((event) => event.toolName ? [event.toolName] : []))], inputSummary: String((brief?.data as { prompt?: string } | undefined)?.prompt || "Natural-language brief"), outputSummary: job.error || (plan ? `Created ${plan.steps.length}-specialist plan` : "Waiting to plan"), latencyMs: managerEvents.reduce((sum, item) => sum + (item.durationMs || 0), 0), tokenEstimate: managerEvents.reduce((sum, item) => sum + (item.promptTokens || 0) + (item.completionTokens || 0), 0), costUsd: managerEvents.reduce((sum, item) => sum + (item.costEstimate || 0), 0) };
     const portableTasks = tasks.sort((a, b) => a.order - b.order).map((task) => {
       const events = traces.filter((item) => item.taskId === task._id);
       const outputEvent = [...events].reverse().find((event) => event.output);
-      return { id: task._id, parentTaskId: managerTask.id, agent: task.role, title: plan?.steps.find((step) => step.order === task.order)?.purpose || task.role, status: portableTaskStatus(task.status), tools: [...new Set(events.flatMap((event) => event.toolName ? [event.toolName] : []))], inputSummary: events.find((event) => event.input)?.summary || (task.inputArtifactIds.length ? `${task.inputArtifactIds.length} recorded input artifact(s)` : "No recorded task input"), outputSummary: outputEvent?.summary || task.blockerReason || "No output yet", latencyMs: task.durationMs || events.reduce((sum, item) => sum + (item.durationMs || 0), 0), tokenEstimate: events.reduce((sum, item) => sum + (item.promptTokens || 0) + (item.completionTokens || 0), 0), costUsd: task.costEstimate || events.reduce((sum, item) => sum + (item.costEstimate || 0), 0) };
+      return { id: task._id, parentTaskId: managerTask.id, agent: task.role, title: plan?.steps.find((step) => step.order === task.order)?.purpose || task.role, status: portableTaskStatus(task.status), tools: [...new Set(events.flatMap((event) => event.toolName ? [event.toolName] : []))], inputSummary: task.inputArtifactIds.length ? `Fed by: ${[...new Set(task.inputArtifactIds.map((id) => artifactKindById.get(id) || "artifact"))].join(", ")}` : (events.find((event) => event.input)?.summary || "No recorded task input"), outputSummary: outputEvent?.summary || task.blockerReason || "No output yet", latencyMs: task.durationMs || events.reduce((sum, item) => sum + (item.durationMs || 0), 0), tokenEstimate: events.reduce((sum, item) => sum + (item.promptTokens || 0) + (item.completionTokens || 0), 0), costUsd: task.costEstimate || events.reduce((sum, item) => sum + (item.costEstimate || 0), 0) };
     });
     const portableArtifacts = artifacts.filter((artifact) => artifact.kind !== "brief").map((artifact) => {
       const escalation = approvals.find((item) => item.taskId === artifact.taskId && item.type === "escalation");
@@ -366,7 +373,7 @@ export const getControlRoomJob = query({
       artifacts: portableArtifacts,
       approvals: approvals.map((item) => ({ id: item._id, taskId: item.taskId, type: item.type, reason: item.reason, status: item.status, resolutionNote: item.resolutionNote })),
       citations: citations.map((item) => ({ id: item._id, artifactId: item.artifactId, title: item.sourceTitle || item.claim, url: item.sourceUrl, snippet: item.snippet || item.claim, query: item.claim, retrievedAt: item._creationTime })),
-      traces: traces.map((item) => ({ id: item._id, taskId: item.taskId, parentTaskId: item.taskId ? managerTask.id : undefined, parentRole: item.parentRole, agent: item.role, event: item.phase, summary: item.summary, inputSummary: item.input ? item.summary : "", outputSummary: item.output ? item.summary : "", tools: item.toolName ? [item.toolName] : [], model: item.model, latencyMs: item.durationMs || 0, tokenEstimate: (item.promptTokens || 0) + (item.completionTokens || 0), costUsd: item.costEstimate || 0, createdAt: item._creationTime })),
+      traces: traces.map((item) => ({ id: item._id, taskId: item.taskId, parentTaskId: item.taskId ? managerTask.id : undefined, parentRole: item.parentRole, agent: item.role, event: item.phase, summary: item.summary, inputSummary: item.input ? item.summary : "", outputSummary: item.output ? item.summary : "", input: compact(item.input), output: compact(item.output), tools: item.toolName ? [item.toolName] : [], model: item.model, latencyMs: item.durationMs || 0, tokenEstimate: (item.promptTokens || 0) + (item.completionTokens || 0), costUsd: item.costEstimate || 0, createdAt: item._creationTime })),
       siteVersionId: portableArtifacts.find((item) => item.kind === "microsite")?.id,
     };
   },

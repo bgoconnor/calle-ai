@@ -5,6 +5,7 @@ import { ROLES } from "./roles";
 import { callStructured } from "./llm";
 import type { Id } from "../_generated/dataModel";
 import { callTool } from "../tools";
+import { runMenuDiscovery, runMenuTestimonials } from "./menuResearch";
 
 type SpecialistResult =
   | { status: "succeeded"; artifactId: Id<"artifacts"> }
@@ -89,16 +90,30 @@ export const runSpecialist = internalAction({
       : undefined;
 
     try {
-      const user = roleDef.buildUser({
-        business: context.business,
-        policies: context.policies,
-        priorArtifacts,
-        revisionNote,
-      });
+      const toolRole = role === "menu_discovery"
+        ? await runMenuDiscovery(ctx, {
+            jobId,
+            taskId,
+            businessId: context.job.businessId,
+            context: { business: context.business, artifacts: context.artifacts },
+          })
+        : role === "menu_testimonials"
+          ? await runMenuTestimonials(ctx, {
+              jobId,
+              taskId,
+              businessId: context.job.businessId,
+              context: { business: context.business, artifacts: context.artifacts },
+            })
+          : null;
 
-      const llm = await callStructured({
+      const llm = toolRole ?? await callStructured({
         system: roleDef.system,
-        user,
+        user: roleDef.buildUser({
+          business: context.business,
+          policies: context.policies,
+          priorArtifacts,
+          revisionNote,
+        }),
         schemaName: roleDef.outputName,
         schema: roleDef.outputSchema,
         images,
@@ -115,6 +130,14 @@ export const runSpecialist = internalAction({
           taskId,
         },
       );
+
+      if (toolRole?.citations.length) {
+        await callTool(ctx, "citations.persist", {
+          jobId,
+          artifactId,
+          citations: toolRole.citations,
+        });
+      }
 
       const durationMs = Date.now() - start;
       await ctx.runMutation(internal.agents.helpers.updateTask, {

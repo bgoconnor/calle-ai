@@ -9,14 +9,23 @@ export type SiteContact = {
 };
 
 export type SiteItem = {
+  id?: string;
   name: LocalizedText;
   description: LocalizedText;
   price?: string;
   note?: LocalizedText;
   tag?: LocalizedText;
+  testimonial?: {
+    quote: string;
+    authorDisplayName?: string | null;
+    sourceName: string;
+    sourceUrl: string;
+    publishedAt?: string | null;
+  } | null;
 };
 
 export type SiteSection = {
+  id?: string;
   title: LocalizedText;
   items: SiteItem[];
 };

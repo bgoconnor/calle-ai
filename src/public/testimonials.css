@@ -1,0 +1,44 @@
+.item-testimonial {
+  position: relative;
+  margin-top: 12px;
+}
+
+.item-testimonial > button {
+  border: 1px solid var(--accent);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font: 600 0.68rem "DM Mono", monospace;
+  padding: 7px 10px;
+}
+
+.item-testimonial > aside {
+  display: none;
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  top: calc(100% + 8px);
+  width: min(290px, 80vw);
+  padding: 15px;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 10px;
+  box-shadow: 5px 5px 0 var(--accent);
+}
+
+.item-testimonial:hover > aside,
+.item-testimonial:focus-within > aside,
+.item-testimonial.open > aside {
+  display: block;
+}
+
+.item-testimonial blockquote {
+  font: 500 0.9rem/1.45 Fraunces, serif;
+  margin: 0 0 10px;
+}
+
+.item-testimonial a {
+  color: var(--sun);
+  font-size: 0.7rem;
+}

@@ -20,6 +20,40 @@ export interface RoleDef {
   }) => string;
 }
 
+const sourceEvidence = {
+  type: "object",
+  additionalProperties: false,
+  required: ["title", "url", "sourceType", "authority", "snippet"],
+  properties: {
+    title: { type: "string" },
+    url: { type: "string" },
+    sourceType: {
+      type: "string",
+      enum: ["official_menu", "official_website", "official_ordering", "owner_asset", "third_party"],
+    },
+    authority: { type: "number" },
+    snippet: { type: "string" },
+  },
+};
+
+const testimonial = {
+  anyOf: [
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["quote", "authorDisplayName", "sourceName", "sourceUrl", "publishedAt"],
+      properties: {
+        quote: { type: "string" },
+        authorDisplayName: { type: ["string", "null"] },
+        sourceName: { type: "string" },
+        sourceUrl: { type: "string" },
+        publishedAt: { type: ["string", "null"] },
+      },
+    },
+    { type: "null" },
+  ],
+};
+
 // Shared prompt block so every specialist sees the business + policy + handoffs.
 function context(args: {
   business: any;
@@ -90,6 +124,129 @@ export const ROLES: Record<string, RoleDef> = {
       `Extract canonical facts for this business.\n\n${context(a)}`,
   },
 
+  menu_discovery: {
+    name: "Menu Discovery Specialist",
+    artifactKind: "menu_sources",
+    outputName: "menu_sources",
+    system:
+      "You use live Linkup results to identify the most authoritative and complete menu sources. " +
+      "Prefer the restaurant's official menu, website, or ordering provider. Search ranking is not authority. " +
+      "Do not invent URLs, menu items, freshness, or source content. Preserve evidence verbatim.",
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["sources", "selectedSourceUrls", "status", "searchesRun", "searchEvidence"],
+      properties: {
+        sources: { type: "array", items: sourceEvidence },
+        selectedSourceUrls: { type: "array", items: { type: "string" } },
+        status: {
+          type: "string",
+          enum: ["authoritative_menu_found", "partial_sources_found", "third_party_only", "not_found"],
+        },
+        searchesRun: { type: "number" },
+        searchEvidence: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["query", "answer"],
+            properties: { query: { type: "string" }, answer: { type: "string" } },
+          },
+        },
+      },
+    },
+    buildUser: (a) => `Select authoritative menu sources from live search evidence.\n\n${context(a)}`,
+  },
+
+  menu_normalization: {
+    name: "Menu Normalization Specialist",
+    artifactKind: "normalized_menu",
+    outputName: "normalized_menu",
+    usesVision: true,
+    system:
+      "Build the most comprehensive menu supported by the discovered sources and owner assets. " +
+      "Preserve original-language names, descriptions, and prices exactly. Give every section and item a stable " +
+      "lowercase kebab-case id. Reconcile duplicates, never invent missing items or prices, and flag uncertainty.",
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["sections", "conflicts", "likelyComplete", "completenessReason"],
+      properties: {
+        sections: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "originalName", "items"],
+            properties: {
+              id: { type: "string" },
+              originalName: { type: "string" },
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["id", "originalName", "originalDescription", "price", "aliases", "sourceUrls", "confidence", "needsReview"],
+                  properties: {
+                    id: { type: "string" },
+                    originalName: { type: "string" },
+                    originalDescription: { type: ["string", "null"] },
+                    price: { type: ["string", "null"] },
+                    aliases: { type: "array", items: { type: "string" } },
+                    sourceUrls: { type: "array", items: { type: "string" } },
+                    confidence: { type: "number" },
+                    needsReview: { type: "boolean" },
+                  },
+                },
+              },
+            },
+          },
+        },
+        conflicts: { type: "array", items: { type: "string" } },
+        likelyComplete: { type: "boolean" },
+        completenessReason: { type: "string" },
+      },
+    },
+    buildUser: (a) => `Normalize the full discovered menu.\n\n${context(a)}`,
+  },
+
+  menu_testimonials: {
+    name: "Menu Testimonial Specialist",
+    artifactKind: "menu_testimonials",
+    outputName: "menu_testimonials",
+    system:
+      "Find short, compelling, attributable direct review quotations for distinct normalized menu items. " +
+      "A quote must appear verbatim in the supplied Linkup evidence, match one current item unambiguously, " +
+      "and retain its source URL. Never compose, repair, translate, or merge quotations.",
+    outputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["highlights", "searchesRun", "stopReason"],
+      properties: {
+        highlights: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["menuItemId", "quote", "authorDisplayName", "sourceName", "sourceUrl", "publishedAt", "confidence"],
+            properties: {
+              menuItemId: { type: "string" },
+              quote: { type: "string" },
+              authorDisplayName: { type: ["string", "null"] },
+              sourceName: { type: "string" },
+              sourceUrl: { type: "string" },
+              publishedAt: { type: ["string", "null"] },
+              confidence: { type: "number" },
+            },
+          },
+        },
+        searchesRun: { type: "number" },
+        stopReason: { type: "string", enum: ["target_reached", "candidates_exhausted", "search_budget_reached"] },
+      },
+    },
+    buildUser: (a) => `Select only verified direct testimonials from live review evidence.\n\n${context(a)}`,
+  },
+
   menu_structuring: {
     name: "Menu Structuring Specialist",
     artifactKind: "menu_catalog",
@@ -132,11 +289,10 @@ export const ROLES: Record<string, RoleDef> = {
     artifactKind: "bilingual_content",
     outputName: "bilingual_content",
     system:
-      "You produce Spanish-first bilingual content. PRESERVE the original Spanish " +
-      "dish/service name exactly — never replace it with a literal English translation. " +
-      "Add a concise English explanation and, for unfamiliar regional items, cultural " +
-      "context. Explain notable translation choices. Example: 'Relleno Negro — Traditional " +
-      "Yucatán turkey stew flavored with roasted chiles, served with a pork-and-egg filling.'",
+      "You localize a normalized menu bidirectionally. Detect the source language per field. " +
+      "If it is Spanish, preserve it verbatim and generate English; if it is English, preserve it " +
+      "verbatim and generate Spanish. For mixed menus, decide per field. Preserve culturally distinctive " +
+      "dish names in both languages, do not translate prices, and never invent a missing description.",
     outputSchema: {
       type: "object",
       additionalProperties: false,
@@ -147,11 +303,13 @@ export const ROLES: Record<string, RoleDef> = {
           items: {
             type: "object",
             additionalProperties: false,
-            required: ["originalName", "englishExplanation", "culturalContext", "translationNote"],
+            required: ["menuItemId", "name", "description", "sourceLanguage", "generatedLanguage", "translationNote"],
             properties: {
-              originalName: { type: "string" },
-              englishExplanation: { type: "string" },
-              culturalContext: { type: ["string", "null"] },
+              menuItemId: { type: "string" },
+              name: bilingual,
+              description: { anyOf: [bilingual, { type: "null" }] },
+              sourceLanguage: { type: "string", enum: ["es", "en", "mixed", "unknown"] },
+              generatedLanguage: { type: ["string", "null"], enum: ["es", "en", null] },
               translationNote: { type: ["string", "null"] },
             },
           },
@@ -159,7 +317,7 @@ export const ROLES: Record<string, RoleDef> = {
       },
     },
     buildUser: (a) =>
-      `Produce bilingual content for the structured catalog, preserving original names.\n\n${context(a)}`,
+      `Fill the other language for every normalized menu item while preserving source text.\n\n${context(a)}`,
   },
 
   discovery: {
@@ -203,9 +361,9 @@ export const ROLES: Record<string, RoleDef> = {
     outputName: "microsite",
     system:
       "You compose the approved specialist outputs into a bilingual public microsite. " +
-      "Spanish-first with English alongside. Use ONLY facts/prices present in the prior " +
-      "artifacts — never introduce new prices or claims. Validate that required sections " +
-      "exist and both languages are present.",
+      "Render EVERY supported normalized menu item, joining localized fields and sparse testimonials by stable item id. " +
+      "Use ONLY facts/prices present in prior artifacts and only exact testimonial quotes with source URLs. " +
+      "Never introduce new prices, claims, or quotes. Validate both languages and the comprehensive menu.",
     outputSchema: {
       type: "object",
       additionalProperties: false,
@@ -246,8 +404,8 @@ export const ROLES: Record<string, RoleDef> = {
           items: {
             type: "object",
             additionalProperties: false,
-            required: ["title", "items"],
-            properties: { title: bilingual, items: { type: "array", items: { type: "object", additionalProperties: false, required: ["name", "description", "price", "note", "tag"], properties: { name: bilingual, description: bilingual, price: { type: ["string", "null"] }, note: { anyOf: [bilingual, { type: "null" }] }, tag: { anyOf: [bilingual, { type: "null" }] } } } } },
+            required: ["id", "title", "items"],
+            properties: { id: { type: "string" }, title: bilingual, items: { type: "array", items: { type: "object", additionalProperties: false, required: ["id", "name", "description", "price", "note", "tag", "testimonial"], properties: { id: { type: "string" }, name: bilingual, description: bilingual, price: { type: ["string", "null"] }, note: { anyOf: [bilingual, { type: "null" }] }, tag: { anyOf: [bilingual, { type: "null" }] }, testimonial } } } },
           },
         },
         guide: { anyOf: [{ type: "object", additionalProperties: false, required: ["title", "body", "picks"], properties: { title: bilingual, body: bilingual, picks: { type: "array", items: { type: "string" } } } }, { type: "null" }] },
@@ -355,8 +513,9 @@ export const ROLES: Record<string, RoleDef> = {
 // so every completed job produces all four deliverables in a reliable order.
 export const CONTENT_ROLES = [
   "intake",
-  "menu_structuring",
+  "menu_discovery",
+  "menu_normalization",
   "localization",
-  "discovery",
+  "menu_testimonials",
 ];
 export const PUBLISH_TAIL = ["publisher_qa", "gbp_pack", "delivery_report"];

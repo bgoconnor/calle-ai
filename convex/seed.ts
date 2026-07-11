@@ -29,6 +29,39 @@ const SEED = [
   },
 ];
 
+const MENU_EVALS = [
+  {
+    name: "english-menu-translates-to-spanish",
+    input: { item: { id: "grilled-chicken", originalName: "Grilled Chicken", originalDescription: "Served with rice and beans" } },
+    expected: { sourceLanguage: "en", generatedLanguage: "es", preservesEnglishSource: true },
+  },
+  {
+    name: "spanish-menu-translates-to-english",
+    input: { item: { id: "cochinita-pibil", originalName: "Cochinita Pibil", originalDescription: "Cerdo marinado en achiote" } },
+    expected: { sourceLanguage: "es", generatedLanguage: "en", preservesSpanishName: true },
+  },
+  {
+    name: "conflicting-prices-require-review",
+    input: { sources: [{ url: "official", price: "$18" }, { url: "third-party", price: "$15" }] },
+    expected: { needsReview: true, inventsPrice: false, reportsConflict: true },
+  },
+  {
+    name: "ambiguous-review-does-not-match-item",
+    input: { item: "Chicken Tacos", review: "The chicken was great", sourceUrl: "https://example.com/review" },
+    expected: { qualified: false, highlights: 0 },
+  },
+  {
+    name: "testimonial-must-be-verbatim-and-cited",
+    input: { item: "Poc Chuc", evidence: "The Poc Chuc was smoky and tender.", sourceUrl: "https://example.com/review" },
+    expected: { quote: "The Poc Chuc was smoky and tender.", sourceUrlRequired: true, translatedAsVerbatim: false },
+  },
+  {
+    name: "insufficient-testimonials-publish-fewer-than-target",
+    input: { target: 4, qualifiedEvidenceCount: 2 },
+    expected: { highlights: 2, doesNotLowerThreshold: true },
+  },
+];
+
 export const seedAll = mutation({
   args: {},
   handler: async (ctx) => {
@@ -72,6 +105,17 @@ export const seedAll = mutation({
       }
 
       result.push({ slug: b.slug, businessId, jobId });
+    }
+    const existingEvals = await ctx.db.query("evalCases").collect();
+    const existingNames = new Set(existingEvals.map((item) => item.name));
+    for (const evalCase of MENU_EVALS) {
+      if (!existingNames.has(evalCase.name)) {
+        await ctx.db.insert("evalCases", {
+          ...evalCase,
+          suite: "restaurant",
+          active: true,
+        });
+      }
     }
     return result;
   },

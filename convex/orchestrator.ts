@@ -8,8 +8,10 @@ import { callTool } from "./tools";
 // Stubbed/derived roles are skipped.
 const REVIEWED = new Set([
   "intake",
-  "menu_structuring",
+  "menu_discovery",
+  "menu_normalization",
   "localization",
+  "menu_testimonials",
   "publisher_qa",
 ]);
 

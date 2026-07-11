@@ -26,7 +26,7 @@ async function forwardToConvex(env: Env, event: string, payload: JsonRecord) {
   const response = await fetch(`${env.CONVEX_HTTP_URL.replace(/\/$/, "")}/worker-ingest`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.WORKER_WRITE_KEY}` },
-    body: JSON.stringify({ event, payload }),
+    body: JSON.stringify({ jobId: payload.jobId, event, payload }),
   });
   if (!response.ok) throw new Error(`Convex event write failed (${response.status})`);
 }

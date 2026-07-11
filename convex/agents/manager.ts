@@ -12,12 +12,14 @@ import { callTool } from "../tools";
 const ROLE_BLURBS: Record<string, string> = {
   intake:
     "Extracts canonical business facts + confidence + missing data from the sources.",
-  menu_structuring:
-    "Structures menu/service items from photos/text (original titles, prices, modifiers).",
+  menu_discovery:
+    "Uses live Linkup search to find authoritative, comprehensive menu sources.",
+  menu_normalization:
+    "Normalizes all supported menu sections and items with stable IDs and provenance.",
   localization:
-    "Produces Spanish-first bilingual content, preserving original names + cultural context.",
-  discovery:
-    "Live, cited local-discovery research + listing-gap analysis (Linkup).",
+    "Detects each source language, preserves it, and generates the missing English or Spanish counterpart.",
+  menu_testimonials:
+    "Uses live Linkup review research to attach 3–4 exact, cited testimonials to distinct menu items.",
 };
 
 const PLAN_SCHEMA = {
@@ -66,7 +68,9 @@ export const planJob = internalAction({
       "You are the Agency Manager of an AI local-presence agency. Plan the CONTENT phase " +
       "for THIS job by choosing and ordering roles from the roster. Tailor each step's purpose " +
       "to the business type and available assets. Include only roles that add value — e.g. skip " +
-      "discovery if there's nothing to research. Different business types and asset sets should " +
+      "menu roles for a non-restaurant. For a restaurant, preserve this dependency order: " +
+      "intake, menu_discovery, menu_normalization, then localization and menu_testimonials. " +
+      "Different business types and asset sets should " +
       "produce different plans. (Publishing steps are added automatically afterward.)";
     const user =
       `AVAILABLE CONTENT SPECIALISTS:\n${roster}\n\n` +

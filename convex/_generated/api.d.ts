@@ -9,16 +9,24 @@
  */
 
 import type * as agency from "../agency.js";
-import type * as evals from "../evals.js";
 import type * as agents_helpers from "../agents/helpers.js";
 import type * as agents_llm from "../agents/llm.js";
 import type * as agents_manager from "../agents/manager.js";
+import type * as agents_menuResearch from "../agents/menuResearch.js";
 import type * as agents_roles from "../agents/roles.js";
 import type * as agents_specialist from "../agents/specialist.js";
+import type * as evals from "../evals.js";
 import type * as http from "../http.js";
 import type * as jobs from "../jobs.js";
 import type * as orchestrator from "../orchestrator.js";
 import type * as seed from "../seed.js";
+import type * as tools_citationPersistenceMutations from "../tools/citationPersistenceMutations.js";
+import type * as tools_citationsPersist from "../tools/citationsPersist.js";
+import type * as tools_index from "../tools/index.js";
+import type * as tools_linkupSearch from "../tools/linkupSearch.js";
+import type * as tools_registry from "../tools/registry.js";
+import type * as tools_traceEmit from "../tools/traceEmit.js";
+import type * as tools_types from "../tools/types.js";
 import type * as trace from "../trace.js";
 import type * as validators from "../validators.js";
 
@@ -30,16 +38,24 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   agency: typeof agency;
-  evals: typeof evals;
   "agents/helpers": typeof agents_helpers;
   "agents/llm": typeof agents_llm;
   "agents/manager": typeof agents_manager;
+  "agents/menuResearch": typeof agents_menuResearch;
   "agents/roles": typeof agents_roles;
   "agents/specialist": typeof agents_specialist;
+  evals: typeof evals;
   http: typeof http;
   jobs: typeof jobs;
   orchestrator: typeof orchestrator;
   seed: typeof seed;
+  "tools/citationPersistenceMutations": typeof tools_citationPersistenceMutations;
+  "tools/citationsPersist": typeof tools_citationsPersist;
+  "tools/index": typeof tools_index;
+  "tools/linkupSearch": typeof tools_linkupSearch;
+  "tools/registry": typeof tools_registry;
+  "tools/traceEmit": typeof tools_traceEmit;
+  "tools/types": typeof tools_types;
   trace: typeof trace;
   validators: typeof validators;
 }>;

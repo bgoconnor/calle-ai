@@ -140,8 +140,15 @@ export const runSpecialist = internalAction({
       ? [...context.artifacts].reverse().find((artifact: any) => artifact.kind === "menu_sources")?.data?.imageEvidence
           ?.map((image: any) => image.url).filter(Boolean) ?? []
       : [];
+    // OpenAI vision must be able to download each URL, and one bad URL fails
+    // the entire call. Drop gated/non-image URLs (e.g. Google Maps static-map
+    // thumbnails that Linkup returns as "image" results and that 400).
+    const visionSafe = (url: string) =>
+      /^https?:\/\//i.test(url) && !/maps\.googleapis\.com|staticmap/i.test(url);
     const images = roleDef.usesVision
-      ? [...new Set([...discoveredImages, ...ownerImages])].slice(0, 12) as string[]
+      ? ([...new Set([...discoveredImages, ...ownerImages])]
+          .filter(visionSafe)
+          .slice(0, 12) as string[])
       : undefined;
 
     try {

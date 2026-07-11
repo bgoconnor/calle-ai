@@ -3,10 +3,14 @@ import type { ToolContext } from "./types";
 
 export type LinkupSearchInput = {
   query: string;
-  depth?: "standard" | "deep";
-  includeImages?: boolean;
   jobId?: Id<"jobs">;
   businessId?: Id<"businesses">;
+  depth?: "fast" | "standard" | "deep";
+  outputType?: "searchResults" | "sourcedAnswer";
+  includeDomains?: string[];
+  excludeDomains?: string[];
+  maxResults?: number;
+  includeImages?: boolean;
 };
 
 export type LinkupSearchOutput = {
@@ -54,7 +58,10 @@ export async function linkupSearch(
     body: JSON.stringify({
       q: query,
       depth: input.depth ?? "standard",
-      outputType: input.includeImages ? "searchResults" : "sourcedAnswer",
+      outputType: input.outputType ?? (input.includeImages ? "searchResults" : "sourcedAnswer"),
+      ...(input.includeDomains?.length ? { includeDomains: input.includeDomains.slice(0, 100) } : {}),
+      ...(input.excludeDomains?.length ? { excludeDomains: input.excludeDomains } : {}),
+      ...(input.maxResults ? { maxResults: Math.max(1, Math.min(input.maxResults, 20)) } : {}),
       ...(input.includeImages ? { includeImages: true } : {}),
     }),
     signal: AbortSignal.timeout(input.depth === "deep" ? DEEP_TIMEOUT_MS : STANDARD_TIMEOUT_MS),

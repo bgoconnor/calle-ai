@@ -55,20 +55,25 @@ export async function runMenuDiscovery(
   const businessQueries = [...args.context.artifacts]
     .reverse()
     .find((artifact) => artifact.kind === "business_facts")?.data?.handoff?.menuResearchQueries;
+  const suggestedQuery = Array.isArray(businessQueries)
+    ? businessQueries.find((query): query is string => typeof query === "string")
+    : undefined;
   const queries = [
-    ...(Array.isArray(businessQueries) ? businessQueries.filter((query): query is string => typeof query === "string") : []),
-    `Find the official website, owner-published menu, or direct menu PDF for "${name}". Return the menu URL, not an editorial article.`,
-    `Find a complete current itemized menu for "${name}" on official ordering pages or menu databases such as AllMenus, MenuPages, Restaurantji, Toast, Square, Grubhub, or DoorDash.`,
-    `Find all readable menu images, PDFs, or owner social posts for "${name}". Menus may span several images; favor recent uploads.`,
+    { pattern: "exact_keyword", query: `"${args.context.business?.name ?? name}" menu "${args.context.business?.address ?? ""}"`, depth: "fast" as const, outputType: "searchResults" as const },
+    { pattern: "official_menu", query: suggestedQuery ?? `Find the official website or owner-published menu for "${name}". Return direct menu pages, PDFs, or images with sections, items, descriptions, and prices.`, depth: "standard" as const, outputType: "searchResults" as const },
+    { pattern: "ordering_platforms", query: `Find the complete current menu for "${name}". Match the address and return itemized menu pages.`, depth: "standard" as const, outputType: "searchResults" as const, includeDomains: ["allmenus.com", "menupages.com", "restaurantji.com", "toasttab.com", "square.site", "squareup.com", "clover.com", "doordash.com", "ubereats.com", "grubhub.com"] },
   ].slice(0, MENU_SEARCH_BUDGET);
   const searches: any[] = [];
 
-  for (const query of queries) {
+  for (const pattern of queries) {
     const started = Date.now();
     const result = await callTool(ctx, "linkup.search", {
-      query,
-      depth: "deep",
+      query: pattern.query,
       businessId: args.businessId,
+      depth: pattern.depth,
+      outputType: pattern.outputType,
+      includeDomains: pattern.includeDomains,
+      maxResults: MAX_SOURCES_PER_SEARCH,
     });
     searches.push({
       ...result,
@@ -81,7 +86,7 @@ export async function runMenuDiscovery(
       role: ROLES.menu_discovery.name,
       phase: "tool_call",
       summary: `Linkup menu discovery returned ${result.results.length} sources`,
-      input: { query },
+      input: { pattern: pattern.pattern, query: pattern.query, depth: pattern.depth, outputType: pattern.outputType, includeDomains: pattern.includeDomains },
       output: { sourceUrls: result.results.map((source) => source.url) },
       toolName: "linkup.search",
       durationMs: Date.now() - started,
@@ -94,16 +99,27 @@ export async function runMenuDiscovery(
   });
   searches.push(imageSearch);
 
+  const imageStarted = Date.now();
+  await callTool(ctx, "trace.emit", {
+    jobId: args.jobId, taskId: args.taskId, parentRole: "Agency Manager", role: ROLES.menu_discovery.name,
+    phase: "tool_call", summary: `Linkup image discovery returned ${imageSearch.results.length} assets`,
+    input: { query: imageQuery }, output: { imageUrls: imageSearch.results.map((result) => result.url) },
+    toolName: "linkup.search", durationMs: Date.now() - imageStarted,
+  });
+
   const candidatePattern = /allmenus|menupages|restaurantji|grubhub|doordash|toasttab|squareup|order|\/menu|\.pdf/i;
   const editorialPattern = /sfchronicle|newspaper|magazine|blog|article|best-of/i;
-  const candidateUrls = [...new Set(searches.flatMap((search) => search.results)
+  const candidates = dedupeSources(searches.flatMap((search) => search.results))
     .filter((source: any) => source.type !== "image" && candidatePattern.test(source.url) && !editorialPattern.test(source.url))
-    .map((source: any) => source.url))].slice(0, 4) as string[];
+    .slice(0, 4);
   const pageEvidence: any[] = [];
-  for (const url of candidateUrls) {
+  const fetchedByUrl = new Map<string, string>();
+  for (const source of candidates) {
+    const url = source.url;
     const started = Date.now();
     try {
       const fetched = await callTool(ctx, "linkup.fetch", { url, renderJs: true, extractImages: true });
+      if (fetched.markdown) fetchedByUrl.set(canonicalUrl(url) ?? url, fetched.markdown);
       pageEvidence.push({ ...fetched, images: fetched.images.map((image, index) => ({ ...image, pageOrder: index + 1 })) });
       await callTool(ctx, "trace.emit", {
         jobId: args.jobId, taskId: args.taskId, parentRole: "Agency Manager", role: ROLES.menu_discovery.name,
@@ -124,6 +140,7 @@ export async function runMenuDiscovery(
     search.results.map((result: any, sourceIndex: number) => ({
       ...result,
       answer: search.answer,
+      snippet: fetchedByUrl.get(canonicalUrl(result.url) ?? result.url) ?? result.snippet,
       query: search.query,
       retrievedAt: search.retrievedAt,
       searchIndex,

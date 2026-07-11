@@ -13,16 +13,18 @@ export type LinkupFetchOutput = {
   retrievedAt: string;
 };
 
+const LINKUP_FETCH_URL = "https://api.linkup.so/v1/fetch";
 export async function linkupFetch(
   _ctx: ToolContext,
   input: LinkupFetchInput,
 ): Promise<LinkupFetchOutput> {
   const apiKey = process.env.LINKUP_API_KEY;
   if (!apiKey) throw new Error("LINKUP_API_KEY is not set");
-  const url = input.url.trim();
-  if (!/^https?:\/\//i.test(url)) throw new Error("linkup.fetch requires an http(s) URL");
+  const parsedUrl = new URL(input.url);
+  if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") throw new Error("linkup.fetch requires an HTTP URL");
+  const url = parsedUrl.toString();
 
-  const response = await fetch("https://api.linkup.so/v1/fetch", {
+  const response = await fetch(LINKUP_FETCH_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({

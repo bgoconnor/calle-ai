@@ -5,6 +5,12 @@ export type LinkupSearchInput = {
   query: string;
   jobId?: Id<"jobs">;
   businessId?: Id<"businesses">;
+  depth?: "fast" | "standard" | "deep";
+  outputType?: "searchResults" | "sourcedAnswer";
+  includeDomains?: string[];
+  excludeDomains?: string[];
+  maxResults?: number;
+  includeImages?: boolean;
 };
 
 export type LinkupSearchOutput = {
@@ -49,8 +55,12 @@ export async function linkupSearch(
     },
     body: JSON.stringify({
       q: query,
-      depth: "standard",
-      outputType: "sourcedAnswer",
+      depth: input.depth ?? "standard",
+      outputType: input.outputType ?? "searchResults",
+      ...(input.includeDomains?.length ? { includeDomains: input.includeDomains.slice(0, 100) } : {}),
+      ...(input.excludeDomains?.length ? { excludeDomains: input.excludeDomains } : {}),
+      ...(input.maxResults ? { maxResults: Math.max(1, Math.min(input.maxResults, 20)) } : {}),
+      ...(input.includeImages ? { includeImages: true } : {}),
     }),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
@@ -65,10 +75,12 @@ export async function linkupSearch(
   const raw = (await response.json()) as {
     answer?: unknown;
     sources?: Array<Record<string, unknown>>;
+    results?: Array<Record<string, unknown>>;
   };
 
-  const results = Array.isArray(raw.sources)
-    ? raw.sources.map((source) => ({
+  const rawResults = Array.isArray(raw.results) ? raw.results : raw.sources;
+  const results = Array.isArray(rawResults)
+    ? rawResults.map((source) => ({
         title: String(source.name ?? source.title ?? "Untitled source"),
         url: String(source.url ?? ""),
         snippet: String(source.snippet ?? source.content ?? ""),

@@ -55,19 +55,25 @@ export async function runMenuDiscovery(
   const businessQueries = [...args.context.artifacts]
     .reverse()
     .find((artifact) => artifact.kind === "business_facts")?.data?.handoff?.menuResearchQueries;
+  const suggestedQuery = Array.isArray(businessQueries)
+    ? businessQueries.find((query): query is string => typeof query === "string")
+    : undefined;
   const queries = [
-    ...(Array.isArray(businessQueries) ? businessQueries.filter((query): query is string => typeof query === "string") : []),
-    `Find the official website or owner-published menu for "${name}". Return the direct menu page or PDF, not a search result or review page.`,
-    `Find an official ordering page linked to "${name}" with current menu sections, item names, descriptions, and prices.`,
-    `Find owner-published menu images, PDFs, or social posts for "${name}" that can verify missing items or conflicting prices.`,
+    { pattern: "exact_keyword", query: `"${args.context.business?.name ?? name}" menu "${args.context.business?.address ?? ""}"`, depth: "fast" as const, outputType: "searchResults" as const },
+    { pattern: "official_menu", query: suggestedQuery ?? `Find the official website or owner-published menu for "${name}". Return direct menu pages, PDFs, or images with sections, items, descriptions, and prices.`, depth: "standard" as const, outputType: "searchResults" as const },
+    { pattern: "ordering_platforms", query: `Find the current owner-linked ordering menu for "${name}". Match the address before returning menu pages.`, depth: "standard" as const, outputType: "searchResults" as const, includeDomains: ["toasttab.com", "square.site", "squareup.com", "clover.com", "doordash.com", "ubereats.com", "grubhub.com"] },
   ].slice(0, MENU_SEARCH_BUDGET);
   const searches = [];
 
-  for (const query of queries) {
+  for (const pattern of queries) {
     const started = Date.now();
     const result = await callTool(ctx, "linkup.search", {
-      query,
+      query: pattern.query,
       businessId: args.businessId,
+      depth: pattern.depth,
+      outputType: pattern.outputType,
+      includeDomains: pattern.includeDomains,
+      maxResults: MAX_SOURCES_PER_SEARCH,
     });
     searches.push({
       ...result,
@@ -80,16 +86,54 @@ export async function runMenuDiscovery(
       role: ROLES.menu_discovery.name,
       phase: "tool_call",
       summary: `Linkup menu discovery returned ${result.results.length} sources`,
-      input: { query },
+      input: { pattern: pattern.pattern, query: pattern.query, depth: pattern.depth, outputType: pattern.outputType, includeDomains: pattern.includeDomains },
       output: { sourceUrls: result.results.map((source) => source.url) },
       toolName: "linkup.search",
       durationMs: Date.now() - started,
     });
   }
 
+  const fetchedByUrl = new Map<string, string>();
+  const fetchCandidates = dedupeSources(searches.flatMap((search) => search.results))
+    .filter((source) => !/(yelp|tripadvisor|instagram|facebook|tiktok)\.com$/i.test(new URL(source.url).hostname.replace(/^www\./, "")))
+    .slice(0, 4);
+  for (const source of fetchCandidates) {
+    const started = Date.now();
+    try {
+      const fetched = await callTool(ctx, "linkup.fetch", { url: source.url, renderJs: false });
+      if (fetched.markdown) fetchedByUrl.set(canonicalUrl(source.url) ?? source.url, fetched.markdown);
+      await callTool(ctx, "trace.emit", {
+        jobId: args.jobId,
+        taskId: args.taskId,
+        parentRole: "Agency Manager",
+        role: ROLES.menu_discovery.name,
+        phase: "tool_call",
+        summary: "Fetched candidate menu page for full-text evidence",
+        input: { url: source.url },
+        output: { characters: fetched.markdown.length },
+        toolName: "linkup.fetch",
+        durationMs: Date.now() - started,
+      });
+    } catch (error) {
+      await callTool(ctx, "trace.emit", {
+        jobId: args.jobId,
+        taskId: args.taskId,
+        parentRole: "Agency Manager",
+        role: ROLES.menu_discovery.name,
+        phase: "error",
+        summary: "Candidate menu fetch failed; retaining search snippet",
+        input: { url: source.url },
+        output: { error: error instanceof Error ? error.message : String(error) },
+        toolName: "linkup.fetch",
+        durationMs: Date.now() - started,
+      });
+    }
+  }
+
   const evidence = searches.flatMap((search, searchIndex) =>
     search.results.map((result, sourceIndex) => ({
       ...result,
+      snippet: fetchedByUrl.get(canonicalUrl(result.url) ?? result.url) ?? result.snippet,
       query: search.query,
       retrievedAt: search.retrievedAt,
       searchIndex,

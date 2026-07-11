@@ -35,7 +35,7 @@ type RankedSource = LinkupSearchOutput["results"][number] & {
   retrievedAt: string;
 };
 
-const MAX_SEARCHES = 4;
+const MAX_SEARCHES = 5;
 const MAX_RESULTS_PER_SEARCH = 8;
 const ROLE = "Business Research Specialist";
 
@@ -107,14 +107,35 @@ function businessDescriptor(context: ResearchContext): string {
   return [business?.name, business?.type, business?.address].filter(Boolean).join(", ");
 }
 
-function buildQueries(context: ResearchContext): string[] {
+type SearchPattern = {
+  name: string;
+  query: string;
+  depth: "fast" | "standard";
+  outputType: "searchResults" | "sourcedAnswer";
+  includeDomains?: string[];
+};
+
+function buildQueries(context: ResearchContext): SearchPattern[] {
   const descriptor = businessDescriptor(context);
-  return [
-    `Identify the exact local business ${descriptor}. Find its official website or Google Business Profile and current name, category, address, and phone. Do not return similarly named businesses.`,
-    `Find owner-controlled pages for ${descriptor}: official website and official Instagram, Facebook, TikTok, booking, or ordering profiles. Verify the location matches.`,
-    `Find current operating hours, services or cuisine, languages, and booking or ordering details for ${descriptor}. Prefer first-party pages and Google Business Profile.`,
-    `Cross-check listings for ${descriptor} for conflicting address, phone, hours, closure status, or website information. Return source links for every value.`,
-  ].slice(0, MAX_SEARCHES);
+  const exactName = context.business?.name?.trim() ?? descriptor;
+  const address = context.business?.address?.trim() ?? "";
+  const suppliedUrls = [
+    context.business?.mapsUrl,
+    ...context.artifacts.flatMap((artifact) => {
+      const data = artifact.data as { sourceUrls?: unknown } | null;
+      return Array.isArray(data?.sourceUrls)
+        ? data.sourceUrls.filter((url): url is string => typeof url === "string")
+        : [];
+    }),
+  ].filter((url): url is string => typeof url === "string" && /^https?:\/\//.test(url));
+  const patterns: SearchPattern[] = [
+    { name: "exact_keyword", query: `"${exactName}" "${address}"`, depth: "fast", outputType: "searchResults" },
+    ...(suppliedUrls[0] ? [{ name: "supplied_url", query: `${suppliedUrls[0]}\nScrape this page and return exact business identity, address, phone, hours, official links, and visible service or menu links.`, depth: "standard" as const, outputType: "searchResults" as const }] : []),
+    { name: "identity_and_official_domain", query: `Find the exact business ${descriptor}. Retrieve its official homepage, contact page, and Google Business Profile. Extract only identity, address, phone, and official domain evidence. Exclude similarly named businesses.`, depth: "standard", outputType: "searchResults" },
+    { name: "owner_social_and_booking", query: `Find owner-controlled profiles for ${descriptor}. Match the address or phone before returning Instagram, Facebook, TikTok, booking, or ordering pages.`, depth: "standard", outputType: "searchResults", includeDomains: ["instagram.com", "facebook.com", "tiktok.com", "vagaro.com", "booksy.com", "square.site", "toasttab.com", "clover.com", "opentable.com"] },
+    { name: "conflict_crosscheck", query: `Cross-check ${descriptor} for conflicting address, phone, hours, website, and closure status. Return the exact competing values and their URLs; do not reconcile them.`, depth: "standard", outputType: "sourcedAnswer" },
+  ];
+  return patterns.slice(0, MAX_SEARCHES);
 }
 
 function uniqueRankedSources(searches: LinkupSearchOutput[], businessName: string | undefined): RankedSource[] {
@@ -195,13 +216,17 @@ export async function runBusinessResearch(
   if (!args.context.business?.name?.trim()) throw new Error("Business research requires a business name");
 
   const searches: LinkupSearchOutput[] = [];
-  for (const query of buildQueries(args.context)) {
+  for (const pattern of buildQueries(args.context)) {
     const started = Date.now();
     try {
       const search = await callTool(ctx, "linkup.search", {
-        query,
+        query: pattern.query,
         jobId: args.jobId,
         businessId: args.businessId,
+        depth: pattern.depth,
+        outputType: pattern.outputType,
+        includeDomains: pattern.includeDomains,
+        maxResults: MAX_RESULTS_PER_SEARCH,
       });
       searches.push(search);
       await callTool(ctx, "trace.emit", {
@@ -211,7 +236,7 @@ export async function runBusinessResearch(
         role: ROLE,
         phase: "tool_call",
         summary: `Linkup business research returned ${search.results.length} sources`,
-        input: { query },
+        input: { pattern: pattern.name, query: pattern.query, depth: pattern.depth, outputType: pattern.outputType, includeDomains: pattern.includeDomains },
         output: { resultCount: search.results.length, sourceUrls: search.results.map((source) => source.url) },
         toolName: "linkup.search",
         durationMs: Date.now() - started,
@@ -224,7 +249,7 @@ export async function runBusinessResearch(
         role: ROLE,
         phase: "error",
         summary: "Linkup business research query failed",
-        input: { query },
+        input: { pattern: pattern.name, query: pattern.query },
         output: { error: error instanceof Error ? error.message : String(error) },
         toolName: "linkup.search",
         durationMs: Date.now() - started,
@@ -233,6 +258,39 @@ export async function runBusinessResearch(
   }
 
   const sources = uniqueRankedSources(searches, args.context.business.name);
+  for (const source of sources.filter((candidate) =>
+    candidate.sourceType === "official_website" || candidate.sourceType === "booking_or_ordering").slice(0, 3)) {
+    const started = Date.now();
+    try {
+      const fetched = await callTool(ctx, "linkup.fetch", { url: source.url, renderJs: false });
+      if (fetched.markdown) source.snippet = fetched.markdown;
+      await callTool(ctx, "trace.emit", {
+        jobId: args.jobId,
+        taskId: args.taskId,
+        parentRole: "Agency Manager",
+        role: ROLE,
+        phase: "tool_call",
+        summary: "Fetched authoritative business page for full-text evidence",
+        input: { url: source.url },
+        output: { characters: fetched.markdown.length },
+        toolName: "linkup.fetch",
+        durationMs: Date.now() - started,
+      });
+    } catch (error) {
+      await callTool(ctx, "trace.emit", {
+        jobId: args.jobId,
+        taskId: args.taskId,
+        parentRole: "Agency Manager",
+        role: ROLE,
+        phase: "error",
+        summary: "Authoritative page fetch failed; retaining search evidence",
+        input: { url: source.url },
+        output: { error: error instanceof Error ? error.message : String(error) },
+        toolName: "linkup.fetch",
+        durationMs: Date.now() - started,
+      });
+    }
+  }
   const llmStarted = Date.now();
   const llm = await callStructured<BusinessResearchOutput>({
     system:

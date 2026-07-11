@@ -275,6 +275,10 @@ export const runSpecialist = internalAction({
           schemaName: roleDef.outputName,
           schema: roleDef.outputSchema,
           images,
+          model:
+            role === "publisher_qa"
+              ? (process.env.MICROSITE_MODEL ?? "gpt-5.6-sol")
+              : undefined,
         }));
 
       if (role === "publisher_qa") {

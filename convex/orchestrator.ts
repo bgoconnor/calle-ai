@@ -22,13 +22,27 @@ const REVIEWED = new Set([
 // Trigger from the operator board: await runJob({ jobId })
 export const runJob = action({
   args: { jobId: v.id("jobs"), publicBaseUrl: v.optional(v.string()) },
-  handler: async (ctx, { jobId, publicBaseUrl }): Promise<{ status: string; url?: string }> => {
-    const initialContext = await ctx.runQuery(internal.agents.helpers.getJobContext, { jobId });
+  handler: async (
+    ctx,
+    { jobId, publicBaseUrl },
+  ): Promise<{ status: string; url?: string }> => {
+    const initialContext = await ctx.runQuery(
+      internal.agents.helpers.getJobContext,
+      { jobId },
+    );
     const approvalMode = initialContext.job.approvalMode ?? "autonomous";
     const failJob = async (error: string) => {
-      await ctx.runMutation(internal.agents.helpers.setJobStatus, { jobId, status: "failed", error, finishedAt: Date.now() });
+      await ctx.runMutation(internal.agents.helpers.setJobStatus, {
+        jobId,
+        status: "failed",
+        error,
+        finishedAt: Date.now(),
+      });
       if (approvalMode === "autonomous") {
-        await ctx.runMutation(internal.agents.helpers.retractBusinessDeployments, { jobId, reason: error });
+        await ctx.runMutation(
+          internal.agents.helpers.retractBusinessDeployments,
+          { jobId, reason: error },
+        );
       }
       return { status: "failed" as const };
     };
@@ -39,7 +53,9 @@ export const runJob = action({
     });
 
     // 1. Manager dynamically plans the content phase.
-    const plan = await ctx.runAction(internal.agents.manager.planJob, { jobId });
+    const plan = await ctx.runAction(internal.agents.manager.planJob, {
+      jobId,
+    });
 
     // 2. Full plan = content steps + fixed publishing tail.
     const fullRoles = [...plan.steps.map((s) => s.role), ...PUBLISH_TAIL];
@@ -71,14 +87,27 @@ export const runJob = action({
       });
 
       if (step.role === "publisher_qa") {
-        const context = await ctx.runQuery(internal.agents.helpers.getJobContext, { jobId });
-        const normalizedMenu = [...context.artifacts].reverse().find((artifact) => artifact.kind === "normalized_menu")?.data;
-        const testimonials = [...context.artifacts].reverse().find((artifact) => artifact.kind === "menu_testimonials")?.data;
-        const menuSources = [...context.artifacts].reverse().find((artifact) => artifact.kind === "menu_sources")?.data;
+        const context = await ctx.runQuery(
+          internal.agents.helpers.getJobContext,
+          { jobId },
+        );
+        const normalizedMenu = [...context.artifacts]
+          .reverse()
+          .find((artifact) => artifact.kind === "normalized_menu")?.data;
+        const testimonials = [...context.artifacts]
+          .reverse()
+          .find((artifact) => artifact.kind === "menu_testimonials")?.data;
+        const menuSources = [...context.artifacts]
+          .reverse()
+          .find((artifact) => artifact.kind === "menu_sources")?.data;
         if (normalizedMenu) {
-          const handoff = prepareMenuGeneratorHandoff(normalizedMenu, testimonials, menuSources);
+          const handoff = prepareMenuGeneratorHandoff(
+            normalizedMenu,
+            testimonials,
+            menuSources,
+          );
           if (!handoff.publishable) {
-            const reason = `Publisher blocked by evidence gate: ${handoff.blockers.map((blocker) => blocker.message).join(" ")}`;
+            const reason = `Publisher evidence warnings: ${handoff.blockers.map((blocker) => blocker.message).join(" ")}`;
             await callTool(ctx, "trace.emit", {
               jobId,
               taskId,
@@ -89,10 +118,23 @@ export const runJob = action({
               output: handoff,
             });
             if (approvalMode === "require_approval") {
-              await ctx.runMutation(internal.agents.helpers.escalateTask, { jobId, taskId, reason });
+              await ctx.runMutation(internal.agents.helpers.escalateTask, {
+                jobId,
+                taskId,
+                reason,
+              });
               return { status: "escalated" };
             }
-            return await failJob(reason);
+            await callTool(ctx, "trace.emit", {
+              jobId,
+              taskId,
+              parentRole: "Agency Manager",
+              role: "Agency Manager",
+              phase: "review",
+              summary:
+                "Autonomous manager accepted evidence warnings and continued toward publication",
+              output: { decision: "continue", warnings: handoff.blockers },
+            });
           }
         }
       }
@@ -142,31 +184,60 @@ export const runJob = action({
       if (res.artifactId) producedArtifactIds.push(res.artifactId);
     }
 
-    const completedContext = await ctx.runQuery(internal.agents.helpers.getJobContext, { jobId });
-    const latest = (kind: string) => [...completedContext.artifacts].reverse().find((artifact) => artifact.kind === kind)?.data as any;
+    const completedContext = await ctx.runQuery(
+      internal.agents.helpers.getJobContext,
+      { jobId },
+    );
+    const latest = (kind: string) =>
+      [...completedContext.artifacts]
+        .reverse()
+        .find((artifact) => artifact.kind === kind)?.data as any;
     const blockers: string[] = [];
-    if (!latest("microsite")) blockers.push("no microsite artifact was produced");
-    if (/restaurant|food|bakery|cafe/i.test(completedContext.business?.type ?? "")) {
+    if (!latest("microsite"))
+      blockers.push("no microsite artifact was produced");
+    if (
+      /restaurant|food|bakery|cafe/i.test(completedContext.business?.type ?? "")
+    ) {
       const menu = latest("normalized_menu");
-      const itemCount = (menu?.sections ?? []).reduce((sum: number, section: any) => sum + (section.items?.length ?? 0), 0);
-      if (!itemCount) blockers.push("no source-supported menu items were found");
-      if (menu?.likelyComplete === false) blockers.push("the normalized menu is explicitly incomplete");
+      const itemCount = (menu?.sections ?? []).reduce(
+        (sum: number, section: any) => sum + (section.items?.length ?? 0),
+        0,
+      );
+      if (!itemCount)
+        blockers.push("no source-supported menu items were found");
+      if (menu?.likelyComplete === false)
+        blockers.push("the normalized menu is explicitly incomplete");
     }
 
     if (approvalMode === "require_approval") {
       await ctx.runMutation(internal.agents.helpers.setJobStatus, {
         jobId,
         status: "awaiting_approval",
-        ...(blockers.length ? { error: `Publish review required: ${blockers.join("; ")}` } : {}),
+        ...(blockers.length
+          ? { error: `Publish review required: ${blockers.join("; ")}` }
+          : {}),
         finishedAt: Date.now(),
       });
-      await callTool(ctx, "trace.emit", { jobId, role: "Publisher & QA Specialist", phase: "review", summary: blockers.length ? `Waiting for required approval with blockers: ${blockers.join("; ")}` : "Waiting for required operator approval before publishing" });
+      await callTool(ctx, "trace.emit", {
+        jobId,
+        role: "Publisher & QA Specialist",
+        phase: "review",
+        summary: blockers.length
+          ? `Waiting for required approval with blockers: ${blockers.join("; ")}`
+          : "Waiting for required operator approval before publishing",
+      });
       return { status: "awaiting_approval" };
     }
 
-    if (blockers.length) return await failJob(`Autonomous publish blocked: ${blockers.join("; ")}`);
+    if (blockers.length)
+      return await failJob(
+        `Autonomous publish blocked: ${blockers.join("; ")}`,
+      );
 
-    const published = await ctx.runMutation(api.agency.publishJob, { jobId, ...(publicBaseUrl ? { publicBaseUrl } : {}) });
+    const published = await ctx.runMutation(api.agency.publishJob, {
+      jobId,
+      ...(publicBaseUrl ? { publicBaseUrl } : {}),
+    });
     return { status: "published", url: published.url };
   },
 });

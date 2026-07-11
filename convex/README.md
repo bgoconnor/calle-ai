@@ -28,7 +28,7 @@ Unverified fields should not appear as customer-facing facts.
 
 The Cloudflare Worker should POST to `https://<deployment>.convex.site/worker-ingest` with `Authorization: Bearer <WORKER_WRITE_KEY>` and `{ jobId, event, payload }` after a Linkup or ElevenLabs call. Set the same `WORKER_WRITE_KEY` manually in both Convex (`npx convex env set`) and Cloudflare Worker secrets (`wrangler secret put`). This is intentionally server-only: provider credentials never reach the browser.
 
-Manual account dependencies: Convex project/deployment; Cloudflare account and Pages/Worker project; Linkup API key; ElevenLabs API key; and `OPENAI_API_KEY` (plus optional `OPENAI_MODEL`, e.g. `gpt-4.1-mini`) when replacing deterministic manager/specialist runs with live model calls. Dodo requires an activated merchant account and webhook secret, but is not needed for the deterministic demo run.
+Manual account dependencies: Convex project/deployment; Cloudflare account and Pages/Worker project; Linkup API key; ElevenLabs API key; and `OPENAI_API_KEY`. `OPENAI_MODEL` defaults to `gpt-5.6-terra`; `MICROSITE_MODEL` defaults to `gpt-5.6-sol` for the publisher only. Dodo requires an activated merchant account and webhook secret, but is not needed for the deterministic demo run.
 
 ## Live menu agency pipeline
 

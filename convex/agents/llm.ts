@@ -8,7 +8,7 @@
 // Optionally override the model with OPENAI_MODEL (defaults below).
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
-const DEFAULT_MODEL = "gpt-4o";
+const DEFAULT_MODEL = "gpt-5.6-terra";
 
 export type LLMResult<T> = {
   data: T;
@@ -104,9 +104,7 @@ export async function callStructured<T>(opts: {
       /download|timeout|image|url/i.test(body);
     if (isImageDownloadError) {
       const named = images.filter((url) => body.includes(url.slice(0, 60)));
-      images = named.length
-        ? images.filter((url) => !named.includes(url))
-        : []; // can't identify the culprit → retry text-only
+      images = named.length ? images.filter((url) => !named.includes(url)) : []; // can't identify the culprit → retry text-only
       continue;
     }
 

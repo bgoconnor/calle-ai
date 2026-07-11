@@ -53,9 +53,14 @@ export const runJob = action({
     });
 
     // 1. Manager dynamically plans the content phase.
-    const plan = await ctx.runAction(internal.agents.manager.planJob, {
-      jobId,
-    });
+    let plan;
+    try {
+      plan = await ctx.runAction(internal.agents.manager.planJob, { jobId });
+    } catch (error) {
+      return await failJob(
+        `Manager planning failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
 
     // 2. Full plan = content steps + fixed publishing tail.
     const fullRoles = [...plan.steps.map((s) => s.role), ...PUBLISH_TAIL];

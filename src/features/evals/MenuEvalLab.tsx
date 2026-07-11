@@ -18,7 +18,7 @@ export function MenuEvalLab() {
   const unsupported = focus === "unsupported" ? scores.baseline.unsupportedItems : [];
 
   return <main className="eval-lab">
-    <header className="eval-hero"><div><p className="eval-kicker">Agent Lab · Menu normalization</p><h1>Same brief.<br /><em>Different machinery.</em></h1><p>One OpenAI call with no tools versus Calle AI’s Linkup discovery, normalization, and direction-aware translation workflow.</p></div><aside><span>Evaluation mode</span><b>Frozen evidence replay</b><small>Sample comparison · not a live provider run</small></aside></header>
+    <header className="eval-hero"><div><p className="eval-kicker">Agent Lab · Menu normalization</p><h1>Same brief.<br /><em>Different machinery.</em></h1><p>One OpenAI call with no tools versus Calle AI’s Linkup discovery, normalization, and direction-aware translation workflow.</p><a href="/evals/dev">Open developer workbench →</a></div><aside><span>Evaluation mode</span><b>Frozen evidence replay</b><small>Sample comparison · not a live provider run</small></aside></header>
 
     <section className="eval-prompt"><span>Shared prompt</span><blockquote>“{baseline.prompt}”</blockquote><div><i>Same model</i><i>Same JSON contract</i><i>Same bilingual requirements</i><i>Same frozen ground truth</i></div></section>
 

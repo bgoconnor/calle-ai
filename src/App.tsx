@@ -4,7 +4,7 @@ import { ControlRoom, mockControlRoomAdapter } from "./features/control-room";
 import { platformConfig } from "./lib/platform";
 import { ConnectedPublicSite } from "./public/ConnectedPublicSite";
 import { createLiveControlAdapter, createLiveIntakeAdapter } from "./lib/liveAgency";
-import { MenuEvalLab } from "./features/evals";
+import { DevEvalLab, MenuEvalLab } from "./features/evals";
 import "./app.css";
 
 type Route =
@@ -12,6 +12,7 @@ type Route =
   | { kind: "advanced" }
   | { kind: "control"; jobId?: string }
   | { kind: "evals" }
+  | { kind: "dev-evals" }
   | { kind: "site"; slug: string };
 
 function readRoute(): Route {
@@ -22,6 +23,7 @@ function readRoute(): Route {
   if (job) return { kind: "control", jobId: decodeURIComponent(job[1]) };
   if (path === "/jobs") return { kind: "control" };
   if (path === "/advanced") return { kind: "advanced" };
+  if (path === "/evals/dev") return { kind: "dev-evals" };
   if (path === "/evals") return { kind: "evals" };
   return { kind: "quick" };
 }
@@ -54,7 +56,7 @@ export function App() {
         <nav aria-label="Agency navigation">
           <button className={route.kind === "quick" || route.kind === "advanced" ? "active" : ""} onClick={() => navigate("/")}>New job</button>
           <button className={route.kind === "control" ? "active" : ""} onClick={() => navigate("/jobs")}>Control room</button>
-          <button className={route.kind === "evals" ? "active" : ""} onClick={() => navigate("/evals")}>Agent lab</button>
+          <button className={route.kind === "evals" || route.kind === "dev-evals" ? "active" : ""} onClick={() => navigate("/evals")}>Agent lab</button>
           <a href="/b/yucatasia">Demo storefront ↗</a>
         </nav>
       </header>
@@ -73,6 +75,8 @@ export function App() {
         />
       ) : route.kind === "evals" ? (
         <MenuEvalLab />
+      ) : route.kind === "dev-evals" ? (
+        <DevEvalLab convexUrl={platformConfig.convexUrl} onOpenJob={(jobId) => navigate(`/jobs/${jobId}`)} />
       ) : (
         <ControlRoom adapter={controlAdapter} initialJobId={route.jobId} />
       )}

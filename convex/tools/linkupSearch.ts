@@ -19,7 +19,8 @@ export type LinkupSearchOutput = {
   retrievedAt: string;
 };
 
-const REQUEST_TIMEOUT_MS = 15_000;
+const STANDARD_TIMEOUT_MS = 15_000;
+const DEEP_TIMEOUT_MS = 45_000;
 const LINKUP_URL = "https://api.linkup.so/v1/search";
 
 /**
@@ -53,7 +54,7 @@ export async function linkupSearch(
       depth: input.depth ?? "standard",
       outputType: "sourcedAnswer",
     }),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    signal: AbortSignal.timeout(input.depth === "deep" ? DEEP_TIMEOUT_MS : STANDARD_TIMEOUT_MS),
   });
 
   if (!response.ok) {

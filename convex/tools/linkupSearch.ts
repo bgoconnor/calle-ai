@@ -3,6 +3,7 @@ import type { ToolContext } from "./types";
 
 export type LinkupSearchInput = {
   query: string;
+  depth?: "standard" | "deep";
   jobId?: Id<"jobs">;
   businessId?: Id<"businesses">;
 };
@@ -49,7 +50,7 @@ export async function linkupSearch(
     },
     body: JSON.stringify({
       q: query,
-      depth: "standard",
+      depth: input.depth ?? "standard",
       outputType: "sourcedAnswer",
     }),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),

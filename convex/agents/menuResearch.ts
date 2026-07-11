@@ -44,8 +44,9 @@ export async function runMenuDiscovery(
 ): Promise<ToolRoleResult> {
   const name = businessSearchName(args.context);
   const queries = [
-    `Find the official, current, comprehensive menu for ${name}. Prefer the restaurant website, official menu PDF, or ordering page.`,
-    `Find the complete menu with sections, item names, descriptions, and prices for ${name}. Return authoritative source links.`,
+    `Find the official or owner-controlled current menu for ${name}. Look specifically for the restaurant website, a menu PDF, or an ordering page linked to this exact business and address. Return menu URLs, not editorial articles.`,
+    `Find a complete itemized menu with prices for the exact business ${name}. Search menu databases and ordering pages including AllMenus, MenuPages, Restaurantji, Grubhub, DoorDash, Toast, Square, and archived menu pages. Do not substitute similarly named restaurants.`,
+    `Find readable menu images, menu PDFs, or itemized menu pages for ${name}. Extract section names, every visible item, description, and price exactly as shown, with the source URL.`,
   ];
   const searches = [];
 
@@ -53,6 +54,7 @@ export async function runMenuDiscovery(
     const started = Date.now();
     const result = await callTool(ctx, "linkup.search", {
       query,
+      depth: "deep",
       businessId: args.businessId,
     });
     searches.push(result);
@@ -64,6 +66,28 @@ export async function runMenuDiscovery(
       phase: "tool_call",
       summary: `Linkup menu discovery returned ${result.results.length} sources`,
       input: { query },
+      output: { sourceUrls: result.results.map((source) => source.url) },
+      toolName: "linkup.search",
+      durationMs: Date.now() - started,
+    });
+  }
+
+  const menuCandidate = searches
+    .flatMap((search) => search.results)
+    .find((source) => /allmenus|menupages|restaurantji|grubhub|doordash|toasttab|squareup|\/menu/i.test(source.url));
+  if (menuCandidate) {
+    const query = `Use this exact menu source for ${name}: ${menuCandidate.url}. Extract the comprehensive menu into a sourced answer: every section, item name, description, and price visible on that page. Clearly state anything the page does not contain; do not add items from general knowledge or editorial articles.`;
+    const started = Date.now();
+    const result = await callTool(ctx, "linkup.search", { query, depth: "deep", businessId: args.businessId });
+    searches.push(result);
+    await callTool(ctx, "trace.emit", {
+      jobId: args.jobId,
+      taskId: args.taskId,
+      parentRole: "Agency Manager",
+      role: ROLES.menu_discovery.name,
+      phase: "tool_call",
+      summary: `Deep-extracted menu candidate with ${result.results.length} supporting sources`,
+      input: { query, menuCandidateUrl: menuCandidate.url },
       output: { sourceUrls: result.results.map((source) => source.url) },
       toolName: "linkup.search",
       durationMs: Date.now() - started,

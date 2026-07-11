@@ -50,7 +50,14 @@ const TESTIMONIAL_EVALUATION_SCHEMA = {
 };
 
 function businessSearchName(context: ResearchContext) {
-  return [context.business?.name, context.business?.address]
+  const verified = [...context.artifacts]
+    .reverse()
+    .find((artifact) => artifact.kind === "business_facts")
+    ?.data?.canonicalFacts;
+  return [
+    verified?.name ?? context.business?.name,
+    verified?.address ?? context.business?.address,
+  ]
     .filter(Boolean)
     .join(" ");
 }
@@ -197,7 +204,13 @@ export async function runMenuDiscovery(
     /allmenus|menupages|restaurantji|restaurantguru|menu-world|wheree|grubhub|doordash|toasttab|squareup|order|\/menu|\.pdf/i;
   const editorialPattern =
     /sfchronicle|newspaper|magazine|blog|article|best-of/i;
-  const distinctiveName = String(args.context.business?.name ?? "")
+  const verifiedName = [...args.context.artifacts]
+    .reverse()
+    .find((artifact) => artifact.kind === "business_facts")?.data
+    ?.canonicalFacts?.name;
+  const distinctiveName = String(
+    verifiedName ?? args.context.business?.name ?? "",
+  )
     .toLowerCase()
     .split(/[^a-z0-9]+/)
     .find(

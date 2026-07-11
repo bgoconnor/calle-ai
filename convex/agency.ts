@@ -140,6 +140,13 @@ export const createJobFromPrompt = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const usableAddress =
+      args.address &&
+      !/research from brief|research pending|location to confirm/i.test(
+        args.address,
+      )
+        ? args.address
+        : undefined;
     const name = args.businessName?.trim() || "Business pending research";
     const baseSlug = slugify(name) || "research-pending";
     const slug = args.businessName
@@ -159,7 +166,7 @@ export const createJobFromPrompt = mutation({
         type: args.businessType || "local_business",
         languages: args.languages?.length ? args.languages : ["es", "en"],
         mapsUrl: args.mapsUrl,
-        address: args.address,
+        address: usableAddress,
         notes:
           "Business identity and facts must be verified by the research agent.",
       }));
@@ -168,7 +175,7 @@ export const createJobFromPrompt = mutation({
         ...(args.businessType ? { type: args.businessType } : {}),
         ...(args.languages?.length ? { languages: args.languages } : {}),
         ...(args.mapsUrl ? { mapsUrl: args.mapsUrl } : {}),
-        ...(args.address ? { address: args.address } : {}),
+        ...(usableAddress ? { address: usableAddress } : {}),
         notes:
           "Business identity and facts must be re-verified by the research agent for this job.",
       });
@@ -215,7 +222,7 @@ export const createJobFromPrompt = mutation({
           "Research the business and publish a bilingual local-presence pack",
         business: {
           name,
-          city: args.address || "Research pending",
+          city: usableAddress || "Research pending",
           category: args.businessType || "Local business",
         },
         languages: {

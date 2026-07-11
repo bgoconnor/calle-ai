@@ -247,10 +247,28 @@ export const runJob = action({
       return { status: "awaiting_approval" };
     }
 
-    if (blockers.length)
-      return await failJob(
-        `Autonomous publish blocked: ${blockers.join("; ")}`,
+    if (blockers.length) {
+      const hardBlockers = blockers.filter((blocker) =>
+        blocker.includes("no microsite artifact"),
       );
+      await callTool(ctx, "trace.emit", {
+        jobId,
+        role: "Agency Manager",
+        phase: "review",
+        summary: hardBlockers.length
+          ? `Autonomous publish has terminal blockers: ${hardBlockers.join("; ")}`
+          : `Autonomous manager published with degraded optional deliverables: ${blockers.join("; ")}`,
+        output: {
+          blockers,
+          hardBlockers,
+          decision: hardBlockers.length ? "retract" : "publish_degraded",
+        },
+      });
+      if (hardBlockers.length)
+        return await failJob(
+          `Autonomous publish blocked: ${hardBlockers.join("; ")}`,
+        );
+    }
 
     const published = await ctx.runMutation(api.agency.publishJob, {
       jobId,

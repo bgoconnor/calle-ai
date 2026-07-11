@@ -170,7 +170,7 @@ export async function runMenuDiscovery(
     });
   }
 
-  const imageQuery = `Find every readable menu image or photographed menu page for the exact restaurant ${name}. A menu may span multiple images; return all distinct pages and collages, favoring recent uploads.`;
+  const imageQuery = `${name} exact menu photos cocktails vermouth drink list chalkboard. Find every readable photographed menu page for this exact San Francisco business; return distinct raster images, not just pages or similarly named businesses.`;
   const imageSearch = await callTool(ctx, "linkup.search", {
     query: imageQuery,
     depth: "standard",

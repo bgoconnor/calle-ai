@@ -44,50 +44,76 @@ export async function callStructured<T>(opts: {
   }
   const model = opts.model ?? process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
 
-  const userContent: unknown[] = [{ type: "text", text: opts.user }];
-  for (const url of opts.images ?? []) {
-    userContent.push({ type: "image_url", image_url: { url } });
-  }
+  // OpenAI downloads each image URL server-side and rejects the WHOLE request
+  // (400) if any one fails to download. So on an image-download 400 we drop the
+  // offending URL(s) and retry with the remaining good images, rather than
+  // letting a single bad URL fail the whole call. Fall back to text-only if the
+  // culprit can't be identified.
+  let images = opts.images ? [...opts.images] : [];
 
-  const res = await fetch(OPENAI_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: opts.temperature ?? 0.3,
-      messages: [
-        { role: "system", content: opts.system },
-        { role: "user", content: userContent },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: opts.schemaName,
-          strict: true,
-          schema: opts.schema,
-        },
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const userContent: unknown[] = [{ type: "text", text: opts.user }];
+    for (const url of images) {
+      userContent.push({ type: "image_url", image_url: { url } });
+    }
+
+    const res = await fetch(OPENAI_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
       },
-    }),
-  });
+      body: JSON.stringify({
+        model,
+        temperature: opts.temperature ?? 0.3,
+        messages: [
+          { role: "system", content: opts.system },
+          { role: "user", content: userContent },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: opts.schemaName,
+            strict: true,
+            schema: opts.schema,
+          },
+        },
+      }),
+    });
 
-  if (!res.ok) {
+    if (res.ok) {
+      const json = await res.json();
+      const content = json.choices?.[0]?.message?.content;
+      if (typeof content !== "string") {
+        throw new Error("OpenAI returned no message content");
+      }
+      return {
+        data: JSON.parse(content) as T,
+        model,
+        promptTokens: json.usage?.prompt_tokens,
+        completionTokens: json.usage?.completion_tokens,
+      };
+    }
+
     const body = await res.text();
+
+    // Recover from image-download failures by dropping the unreachable URL(s).
+    const isImageDownloadError =
+      res.status === 400 &&
+      images.length > 0 &&
+      /download|timeout|image|url/i.test(body);
+    if (isImageDownloadError) {
+      const named = images.filter((url) => body.includes(url.slice(0, 60)));
+      images = named.length
+        ? images.filter((url) => !named.includes(url))
+        : []; // can't identify the culprit → retry text-only
+      continue;
+    }
+
     throw new Error(`OpenAI ${res.status}: ${body.slice(0, 500)}`);
   }
 
-  const json = await res.json();
-  const content = json.choices?.[0]?.message?.content;
-  if (typeof content !== "string") {
-    throw new Error("OpenAI returned no message content");
-  }
-
-  return {
-    data: JSON.parse(content) as T,
-    model,
-    promptTokens: json.usage?.prompt_tokens,
-    completionTokens: json.usage?.completion_tokens,
-  };
+  throw new Error(
+    "OpenAI request failed after retrying without unreachable images",
+  );
 }

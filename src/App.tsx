@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { AgencyIntake, QuickIntake } from "./features/intake";
 import { ControlRoom, mockControlRoomAdapter } from "./features/control-room";
 import { platformConfig } from "./lib/platform";
-import { PublicSiteRoute } from "./public/PublicSiteRoute";
+import { ConnectedPublicSite } from "./public/ConnectedPublicSite";
+import { createLiveControlAdapter, createLiveIntakeAdapter } from "./lib/liveAgency";
 import "./app.css";
 
 type Route =
@@ -24,6 +25,8 @@ function readRoute(): Route {
 
 export function App() {
   const [route, setRoute] = useState<Route>(() => readRoute());
+  const intakeAdapter = platformConfig.convexUrl ? createLiveIntakeAdapter(platformConfig.convexUrl) : undefined;
+  const controlAdapter = platformConfig.convexUrl ? createLiveControlAdapter(platformConfig.convexUrl) : mockControlRoomAdapter;
 
   useEffect(() => {
     const onPopState = () => setRoute(readRoute());
@@ -37,7 +40,7 @@ export function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  if (route.kind === "site") return <PublicSiteRoute slug={route.slug} />;
+  if (route.kind === "site") return <ConnectedPublicSite slug={route.slug} convexUrl={platformConfig.convexUrl} />;
 
   return (
     <div className="app-frame">
@@ -54,16 +57,18 @@ export function App() {
 
       {route.kind === "quick" ? (
         <QuickIntake
+          adapter={intakeAdapter}
           onAdvanced={() => navigate("/advanced")}
           onLaunched={({ jobId }) => navigate(`/jobs/${jobId}`)}
         />
       ) : route.kind === "advanced" ? (
         <AgencyIntake
+          adapter={intakeAdapter}
           integrationWorkerUrl={platformConfig.integrationWorkerUrl}
           onLaunched={({ jobId }) => navigate(`/jobs/${jobId}`)}
         />
       ) : (
-        <ControlRoom adapter={mockControlRoomAdapter} initialJobId={route.jobId} />
+        <ControlRoom adapter={controlAdapter} initialJobId={route.jobId} />
       )}
     </div>
   );

@@ -47,7 +47,12 @@ export function DevEvalLab({ convexUrl, onOpenJob }: { convexUrl?: string; onOpe
       if (agencyResult.status === "rejected") throw agencyResult.reason;
       if (baselineResult.status === "rejected") throw baselineResult.reason;
       setDetail(await client.query(api.agency.getControlRoomJob, { jobId: created.jobId }) as ControlRoomDetail | null);
-      setState("complete");
+      if ((agencyResult.value as { status?: string }).status === "failed") {
+        setState("failed");
+        setError("The agent team returned a failed run. Inspect the trace below for the exact blocker.");
+      } else {
+        setState("complete");
+      }
     } catch (reason) {
       setState("failed"); setError(reason instanceof Error ? reason.message : String(reason));
     }

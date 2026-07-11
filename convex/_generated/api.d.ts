@@ -9,6 +9,7 @@
  */
 
 import type * as agency from "../agency.js";
+import type * as evals from "../evals.js";
 import type * as agents_helpers from "../agents/helpers.js";
 import type * as agents_llm from "../agents/llm.js";
 import type * as agents_manager from "../agents/manager.js";
@@ -29,6 +30,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   agency: typeof agency;
+  evals: typeof evals;
   "agents/helpers": typeof agents_helpers;
   "agents/llm": typeof agents_llm;
   "agents/manager": typeof agents_manager;

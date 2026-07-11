@@ -77,7 +77,7 @@ export function ControlRoom({
     setLoading(false);
   };
   const metrics = useMemo(() => {
-    const all = detail?.traces ?? [];
+    const all = detail?.tasks ?? [];
     return {
       cost: all.reduce((sum, item) => sum + item.costUsd, 0),
       latency: all.reduce((sum, item) => sum + item.latencyMs, 0),
@@ -529,7 +529,13 @@ function TraceEvents({ events }: { events: ControlTrace[] }) {
                 {event.input != null && (
                   <>
                     <small>Input</small>
-                    <pre style={{ overflowX: "auto", maxHeight: 240, fontSize: 11 }}>
+                    <pre
+                      style={{
+                        overflowX: "auto",
+                        maxHeight: 240,
+                        fontSize: 11,
+                      }}
+                    >
                       {typeof event.input === "string"
                         ? event.input
                         : JSON.stringify(event.input, null, 2)}
@@ -539,7 +545,13 @@ function TraceEvents({ events }: { events: ControlTrace[] }) {
                 {event.output != null && (
                   <>
                     <small>Output</small>
-                    <pre style={{ overflowX: "auto", maxHeight: 240, fontSize: 11 }}>
+                    <pre
+                      style={{
+                        overflowX: "auto",
+                        maxHeight: 240,
+                        fontSize: 11,
+                      }}
+                    >
                       {typeof event.output === "string"
                         ? event.output
                         : JSON.stringify(event.output, null, 2)}

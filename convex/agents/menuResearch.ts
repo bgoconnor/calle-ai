@@ -334,12 +334,17 @@ export async function runMenuDiscovery(
   }));
   llm.data.pageEvidence = pageEvidence;
   llm.data.imageEvidence = [
-    ...imageSearch.results
+    ...searches
+      .flatMap((search) =>
+        search.results.map((result: any) => ({
+          ...result,
+          retrievedAt: search.retrievedAt,
+        })),
+      )
       .filter((result) => result.type === "image")
       .map((result, index) => ({
         ...result,
         pageOrder: index + 1,
-        retrievedAt: imageSearch.retrievedAt,
       })),
     ...pageEvidence.flatMap((page) =>
       page.images.map((image: any) => ({
@@ -348,6 +353,11 @@ export async function runMenuDiscovery(
         retrievedAt: page.retrievedAt,
       })),
     ),
+  ];
+  llm.data.imageEvidence = [
+    ...new Map(
+      llm.data.imageEvidence.map((image: any) => [image.url, image]),
+    ).values(),
   ];
   const selectedPages = pageEvidence.filter((page) =>
     llm.data.selectedSourceUrls.includes(page.url),

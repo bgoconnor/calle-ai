@@ -159,6 +159,19 @@ export const runJob = action({
       );
 
       if (res.status === "failed") {
+        if (step.role === "pdf_menu") {
+          await callTool(ctx, "trace.emit", {
+            jobId,
+            taskId,
+            parentRole: "Agency Manager",
+            role: "Agency Manager",
+            phase: "review",
+            summary:
+              "PDF menu failed as an optional derivative; continuing to microsite publication",
+            output: { decision: "continue_without_pdf" },
+          });
+          continue;
+        }
         return await failJob(`Step ${step.role} failed`);
       }
 

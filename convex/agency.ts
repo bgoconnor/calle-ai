@@ -958,7 +958,7 @@ export const getControlRoomJob = query({
           taskId: artifact.taskId,
           kind: artifact.kind,
           title: titleFor(artifact.kind),
-          payload: artifact.data,
+          payload: compact(artifact.data),
           confidence: artifact.confidence ?? 0,
           approvalStatus:
             escalation?.status === "open"

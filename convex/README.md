@@ -39,7 +39,8 @@ Restaurant jobs can plan these narrow specialist roles:
 3. `menu_normalization` creates the comprehensive original-language menu with stable section/item IDs, provenance, confidence, and conflicts.
 4. `localization` detects language per field, preserves the source text, and generates the missing English or Spanish counterpart.
 5. `menu_testimonials` runs a bounded Linkup loop and accepts at most four short, exact, source-linked quotations for distinct menu items.
-6. `publisher_qa` joins normalized items, localization, and sparse testimonials by stable item ID before the normal GBP/report tail.
+6. `pdf_menu` deterministically renders the latest normalized menu plus bilingual handoff as a printable `printable-menu-pdf.v1` artifact, retaining source artifact IDs and adding no items or prices.
+7. `publisher_qa` joins normalized items, localization, and sparse testimonials by stable item ID before the normal GBP/report tail.
 
 All external and observability calls go through `convex/tools`. Set the Worker base URL in the Convex environment before a live run:
 

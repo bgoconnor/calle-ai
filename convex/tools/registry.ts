@@ -2,6 +2,7 @@ import { persistCitations } from "./citationsPersist";
 import { linkupSearch } from "./linkupSearch";
 import { linkupFetch } from "./linkupFetch";
 import { emitTrace } from "./traceEmit";
+import { generatePdfMenu } from "./pdfMenuGenerate";
 import type { ToolContext, ToolInputs, ToolName, ToolOutputs } from "./types";
 
 const tools = {
@@ -9,6 +10,7 @@ const tools = {
   "citations.persist": persistCitations,
   "linkup.search": linkupSearch,
   "linkup.fetch": linkupFetch,
+  "pdf_menu.generate": generatePdfMenu,
 };
 
 export async function callTool<Name extends ToolName>(

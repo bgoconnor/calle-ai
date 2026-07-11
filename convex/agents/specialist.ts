@@ -42,6 +42,43 @@ export const runSpecialist = internalAction({
       kind: a.kind,
       data: a.data,
     }));
+    if (role === "pdf_menu") {
+      try {
+        const normalized = [...context.artifacts].reverse().find((a: any) => a.kind === "normalized_menu");
+        const bilingual = [...context.artifacts].reverse().find((a: any) => a.kind === "bilingual_content");
+        if (!normalized || !bilingual) throw new Error("PDF menu requires the latest normalized_menu and bilingual_content artifacts");
+        const data = await callTool(ctx, "pdf_menu.generate", {
+          normalizedMenuArtifactId: String(normalized._id),
+          bilingualContentArtifactId: String(bilingual._id),
+          normalizedMenu: normalized.data,
+          bilingualContent: bilingual.data,
+        });
+        const artifactId: Id<"artifacts"> = await ctx.runMutation(internal.agents.helpers.writeArtifact, {
+          jobId,
+          businessId: context.job.businessId,
+          kind: roleDef.artifactKind,
+          data,
+          producedByRole: roleDef.name,
+          taskId,
+          confidence: data.warnings.length ? 0.8 : 1,
+        });
+        const durationMs = Date.now() - start;
+        await ctx.runMutation(internal.agents.helpers.updateTask, { taskId, status: "succeeded", outputArtifactId: artifactId, durationMs });
+        await callTool(ctx, "trace.emit", {
+          jobId, taskId, parentRole: "Agency Manager", role: roleDef.name, phase: "tool_call",
+          summary: `Rendered ${data.itemCount} supported items into a ${data.pageCount}-page PDF menu`,
+          toolName: "pdf_menu.generate", durationMs,
+          input: { sourceArtifactIds: data.sourceArtifactIds },
+          output: { artifactId, pageCount: data.pageCount, itemCount: data.itemCount, warnings: data.warnings },
+        });
+        return { status: "succeeded", artifactId };
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        await ctx.runMutation(internal.agents.helpers.updateTask, { taskId, status: "failed", blockerReason: message, durationMs: Date.now() - start });
+        await callTool(ctx, "trace.emit", { jobId, taskId, role: roleDef.name, phase: "error", summary: `${roleDef.name} failed: ${message}` });
+        return { status: "failed", error: message };
+      }
+    }
     if (role === "publisher_qa") {
       const normalizedMenu = [...context.artifacts].reverse().find((a: any) => a.kind === "normalized_menu")?.data;
       const testimonials = [...context.artifacts].reverse().find((a: any) => a.kind === "menu_testimonials")?.data;

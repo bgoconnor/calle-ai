@@ -315,6 +315,15 @@ export const ROLES: Record<string, RoleDef> = {
       `Fill the other language for every normalized menu item while preserving source text.\n\n${context(a)}`,
   },
 
+  pdf_menu: {
+    name: "Printable PDF Menu Specialist",
+    artifactKind: "printable_menu_pdf",
+    outputName: "printable_menu_pdf",
+    system: "Deterministically render the normalized and localized menu without adding facts.",
+    outputSchema: { type: "object" },
+    buildUser: (a) => context(a),
+  },
+
   discovery: {
     name: "Local Discovery Research Specialist",
     artifactKind: "research",
@@ -513,4 +522,4 @@ export const CONTENT_ROLES = [
   "localization",
   "menu_testimonials",
 ];
-export const PUBLISH_TAIL = ["publisher_qa", "gbp_pack", "delivery_report"];
+export const PUBLISH_TAIL = ["pdf_menu", "publisher_qa", "gbp_pack", "delivery_report"];

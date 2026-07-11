@@ -3,6 +3,7 @@ import type { ActionCtx } from "../_generated/server";
 import type { CitationsPersistInput, CitationsPersistOutput } from "./citationsPersist";
 import type { LinkupSearchInput, LinkupSearchOutput } from "./linkupSearch";
 import type { LinkupFetchInput, LinkupFetchOutput } from "./linkupFetch";
+import type { PdfMenuGenerateInput, PdfMenuGenerateOutput } from "./pdfMenuGenerate";
 
 export type ToolContext = Pick<ActionCtx, "runMutation">;
 
@@ -28,6 +29,7 @@ export type ToolInputs = {
   "citations.persist": CitationsPersistInput;
   "linkup.search": LinkupSearchInput;
   "linkup.fetch": LinkupFetchInput;
+  "pdf_menu.generate": PdfMenuGenerateInput;
 };
 
 export type ToolOutputs = {
@@ -35,5 +37,6 @@ export type ToolOutputs = {
   "citations.persist": CitationsPersistOutput;
   "linkup.search": LinkupSearchOutput;
   "linkup.fetch": LinkupFetchOutput;
+  "pdf_menu.generate": PdfMenuGenerateOutput;
 };
 export type ToolName = keyof ToolInputs;

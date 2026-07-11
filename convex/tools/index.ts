@@ -3,3 +3,4 @@ export type { ToolContext, ToolInputs, ToolName, ToolOutputs, TraceEmitInput } f
 export type { CitationToPersist, CitationsPersistInput, CitationsPersistOutput } from "./citationsPersist";
 export type { LinkupSearchInput, LinkupSearchOutput } from "./linkupSearch";
 export type { LinkupFetchInput, LinkupFetchOutput } from "./linkupFetch";
+export type { PdfMenuGenerateInput, PdfMenuGenerateOutput } from "./pdfMenuGenerate";

@@ -34,8 +34,27 @@ export type PublishedSite = {
   slug: string;
   kind: "restaurant" | "salon";
   business: { name: string; eyebrow: LocalizedText; contact: SiteContact };
-  theme: "yucatasia" | "chelys";
-  hero: { title: LocalizedText; subtitle: LocalizedText; cta: LocalizedText; image: string };
+  theme: string;
+  brand?: {
+    personality: string;
+    palette: {
+      ink: string;
+      paper: string;
+      accent: string;
+      highlight: string;
+      secondary: string;
+    };
+    imageTreatment: "arched" | "rounded" | "editorial" | "organic";
+    menuDensity: "airy" | "balanced" | "compact";
+    menuHeading: LocalizedText;
+    sticker: LocalizedText;
+  };
+  hero: {
+    title: LocalizedText;
+    subtitle: LocalizedText;
+    cta: LocalizedText;
+    image: string;
+  };
   story: LocalizedText;
   sections: SiteSection[];
   guide?: { title: LocalizedText; body: LocalizedText; picks: string[] };

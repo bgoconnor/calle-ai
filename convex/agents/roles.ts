@@ -30,7 +30,13 @@ const sourceEvidence = {
     url: { type: "string" },
     sourceType: {
       type: "string",
-      enum: ["official_menu", "official_website", "official_ordering", "owner_asset", "third_party"],
+      enum: [
+        "official_menu",
+        "official_website",
+        "official_ordering",
+        "owner_asset",
+        "third_party",
+      ],
     },
     authority: { type: "number" },
     snippet: { type: "string" },
@@ -42,7 +48,13 @@ const testimonial = {
     {
       type: "object",
       additionalProperties: false,
-      required: ["quote", "authorDisplayName", "sourceName", "sourceUrl", "publishedAt"],
+      required: [
+        "quote",
+        "authorDisplayName",
+        "sourceName",
+        "sourceUrl",
+        "publishedAt",
+      ],
       properties: {
         quote: { type: "string" },
         authorDisplayName: { type: ["string", "null"] },
@@ -102,7 +114,15 @@ export const ROLES: Record<string, RoleDef> = {
     outputSchema: {
       type: "object",
       additionalProperties: false,
-      required: ["sources", "selectedSourceUrls", "canonicalSourceUrl", "recencyRationale", "status", "searchesRun", "searchEvidence"],
+      required: [
+        "sources",
+        "selectedSourceUrls",
+        "canonicalSourceUrl",
+        "recencyRationale",
+        "status",
+        "searchesRun",
+        "searchEvidence",
+      ],
       properties: {
         sources: { type: "array", items: sourceEvidence },
         selectedSourceUrls: { type: "array", items: { type: "string" } },
@@ -110,7 +130,12 @@ export const ROLES: Record<string, RoleDef> = {
         recencyRationale: { type: "string" },
         status: {
           type: "string",
-          enum: ["authoritative_menu_found", "partial_sources_found", "third_party_only", "not_found"],
+          enum: [
+            "authoritative_menu_found",
+            "partial_sources_found",
+            "third_party_only",
+            "not_found",
+          ],
         },
         searchesRun: { type: "number" },
         searchEvidence: {
@@ -119,12 +144,16 @@ export const ROLES: Record<string, RoleDef> = {
             type: "object",
             additionalProperties: false,
             required: ["query", "answer"],
-            properties: { query: { type: "string" }, answer: { type: "string" } },
+            properties: {
+              query: { type: "string" },
+              answer: { type: "string" },
+            },
           },
         },
       },
     },
-    buildUser: (a) => `Select authoritative menu sources from live search evidence.\n\n${context(a)}`,
+    buildUser: (a) =>
+      `Select authoritative menu sources from live search evidence.\n\n${context(a)}`,
   },
 
   menu_normalization: {
@@ -142,7 +171,13 @@ export const ROLES: Record<string, RoleDef> = {
     outputSchema: {
       type: "object",
       additionalProperties: false,
-      required: ["sections", "conflicts", "likelyComplete", "completenessReason", "canonicalSourceUrl"],
+      required: [
+        "sections",
+        "conflicts",
+        "likelyComplete",
+        "completenessReason",
+        "canonicalSourceUrl",
+      ],
       properties: {
         sections: {
           type: "array",
@@ -158,7 +193,16 @@ export const ROLES: Record<string, RoleDef> = {
                 items: {
                   type: "object",
                   additionalProperties: false,
-                  required: ["id", "originalName", "originalDescription", "price", "aliases", "sourceUrls", "confidence", "needsReview"],
+                  required: [
+                    "id",
+                    "originalName",
+                    "originalDescription",
+                    "price",
+                    "aliases",
+                    "sourceUrls",
+                    "confidence",
+                    "needsReview",
+                  ],
                   properties: {
                     id: { type: "string" },
                     originalName: { type: "string" },
@@ -201,7 +245,15 @@ export const ROLES: Record<string, RoleDef> = {
           items: {
             type: "object",
             additionalProperties: false,
-            required: ["menuItemId", "quote", "authorDisplayName", "sourceName", "sourceUrl", "publishedAt", "confidence"],
+            required: [
+              "menuItemId",
+              "quote",
+              "authorDisplayName",
+              "sourceName",
+              "sourceUrl",
+              "publishedAt",
+              "confidence",
+            ],
             properties: {
               menuItemId: { type: "string" },
               quote: { type: "string" },
@@ -214,7 +266,14 @@ export const ROLES: Record<string, RoleDef> = {
           },
         },
         searchesRun: { type: "number" },
-        stopReason: { type: "string", enum: ["target_reached", "candidates_exhausted", "search_budget_reached"] },
+        stopReason: {
+          type: "string",
+          enum: [
+            "target_reached",
+            "candidates_exhausted",
+            "search_budget_reached",
+          ],
+        },
         searchEvidence: {
           type: "array",
           items: {
@@ -231,7 +290,11 @@ export const ROLES: Record<string, RoleDef> = {
                   type: "object",
                   additionalProperties: false,
                   required: ["title", "url", "snippet"],
-                  properties: { title: { type: "string" }, url: { type: "string" }, snippet: { type: "string" } },
+                  properties: {
+                    title: { type: "string" },
+                    url: { type: "string" },
+                    snippet: { type: "string" },
+                  },
                 },
               },
             },
@@ -239,7 +302,8 @@ export const ROLES: Record<string, RoleDef> = {
         },
       },
     },
-    buildUser: (a) => `Select only verified direct testimonials from live review evidence.\n\n${context(a)}`,
+    buildUser: (a) =>
+      `Select only verified direct testimonials from live review evidence.\n\n${context(a)}`,
   },
 
   menu_structuring: {
@@ -262,7 +326,14 @@ export const ROLES: Record<string, RoleDef> = {
           items: {
             type: "object",
             additionalProperties: false,
-            required: ["originalTitle", "category", "price", "modifiers", "dietary", "confidence"],
+            required: [
+              "originalTitle",
+              "category",
+              "price",
+              "modifiers",
+              "dietary",
+              "confidence",
+            ],
             properties: {
               originalTitle: { type: "string" },
               category: { type: "string" },
@@ -298,13 +369,26 @@ export const ROLES: Record<string, RoleDef> = {
           items: {
             type: "object",
             additionalProperties: false,
-            required: ["menuItemId", "name", "description", "sourceLanguage", "generatedLanguage", "translationNote"],
+            required: [
+              "menuItemId",
+              "name",
+              "description",
+              "sourceLanguage",
+              "generatedLanguage",
+              "translationNote",
+            ],
             properties: {
               menuItemId: { type: "string" },
               name: bilingual,
               description: { anyOf: [bilingual, { type: "null" }] },
-              sourceLanguage: { type: "string", enum: ["es", "en", "mixed", "unknown"] },
-              generatedLanguage: { type: ["string", "null"], enum: ["es", "en", null] },
+              sourceLanguage: {
+                type: "string",
+                enum: ["es", "en", "mixed", "unknown"],
+              },
+              generatedLanguage: {
+                type: ["string", "null"],
+                enum: ["es", "en", null],
+              },
               translationNote: { type: ["string", "null"] },
             },
           },
@@ -319,7 +403,8 @@ export const ROLES: Record<string, RoleDef> = {
     name: "Printable PDF Menu Specialist",
     artifactKind: "printable_menu_pdf",
     outputName: "printable_menu_pdf",
-    system: "Deterministically render the normalized and localized menu without adding facts.",
+    system:
+      "Deterministically render the normalized and localized menu without adding facts.",
     outputSchema: { type: "object" },
     buildUser: (a) => context(a),
   },
@@ -367,15 +452,66 @@ export const ROLES: Record<string, RoleDef> = {
       "You compose the approved specialist outputs into a bilingual public microsite. " +
       "Render EVERY supported normalized menu item, joining localized fields and sparse testimonials by stable item id. " +
       "Use ONLY facts/prices present in prior artifacts and only exact testimonial quotes with source URLs. " +
-      "Never introduce new prices, claims, or quotes. Validate both languages and the comprehensive menu.",
+      "Never introduce new prices, claims, or quotes. Validate both languages and the comprehensive menu. " +
+      "Create a distinct brand direction from verified business evidence: choose a restrained accessible palette, personality, image treatment, menu density, and short bilingual display copy. " +
+      "Do not infer a regional cuisine, heritage, mood, or visual trope from the name alone. Avoid generic restaurant clichés. Keep the menu highly legible.",
     outputSchema: {
       type: "object",
       additionalProperties: false,
-      required: ["slug", "kind", "theme", "business", "hero", "story", "sections", "guide", "faqs", "conceptLabel"],
+      required: [
+        "slug",
+        "kind",
+        "theme",
+        "brand",
+        "business",
+        "hero",
+        "story",
+        "sections",
+        "guide",
+        "faqs",
+        "conceptLabel",
+      ],
       properties: {
         slug: { type: "string" },
         kind: { type: "string", enum: ["restaurant", "salon"] },
-        theme: { type: "string", enum: ["yucatasia", "chelys"] },
+        theme: { type: "string" },
+        brand: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "personality",
+            "palette",
+            "imageTreatment",
+            "menuDensity",
+            "menuHeading",
+            "sticker",
+          ],
+          properties: {
+            personality: { type: "string" },
+            palette: {
+              type: "object",
+              additionalProperties: false,
+              required: ["ink", "paper", "accent", "highlight", "secondary"],
+              properties: {
+                ink: { type: "string" },
+                paper: { type: "string" },
+                accent: { type: "string" },
+                highlight: { type: "string" },
+                secondary: { type: "string" },
+              },
+            },
+            imageTreatment: {
+              type: "string",
+              enum: ["arched", "rounded", "editorial", "organic"],
+            },
+            menuDensity: {
+              type: "string",
+              enum: ["airy", "balanced", "compact"],
+            },
+            menuHeading: bilingual,
+            sticker: bilingual,
+          },
+        },
         business: {
           type: "object",
           additionalProperties: false,
@@ -388,8 +524,19 @@ export const ROLES: Record<string, RoleDef> = {
               additionalProperties: false,
               required: ["address", "city", "phone", "mapsUrl", "hours"],
               properties: {
-                address: { type: "string" }, city: { type: "string" }, phone: { type: "string" }, mapsUrl: { type: "string" },
-                hours: { type: "array", items: { type: "object", additionalProperties: false, required: ["days", "hours"], properties: { days: bilingual, hours: { type: "string" } } } },
+                address: { type: "string" },
+                city: { type: "string" },
+                phone: { type: "string" },
+                mapsUrl: { type: "string" },
+                hours: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["days", "hours"],
+                    properties: { days: bilingual, hours: { type: "string" } },
+                  },
+                },
               },
             },
           },
@@ -399,7 +546,10 @@ export const ROLES: Record<string, RoleDef> = {
           additionalProperties: false,
           required: ["title", "subtitle", "cta", "image"],
           properties: {
-            title: bilingual, subtitle: bilingual, cta: bilingual, image: { type: "string" },
+            title: bilingual,
+            subtitle: bilingual,
+            cta: bilingual,
+            image: { type: "string" },
           },
         },
         story: bilingual,
@@ -409,16 +559,66 @@ export const ROLES: Record<string, RoleDef> = {
             type: "object",
             additionalProperties: false,
             required: ["id", "title", "items"],
-            properties: { id: { type: "string" }, title: bilingual, items: { type: "array", items: { type: "object", additionalProperties: false, required: ["id", "name", "description", "price", "note", "tag", "testimonial"], properties: { id: { type: "string" }, name: bilingual, description: bilingual, price: { type: ["string", "null"] }, note: { anyOf: [bilingual, { type: "null" }] }, tag: { anyOf: [bilingual, { type: "null" }] }, testimonial } } } },
+            properties: {
+              id: { type: "string" },
+              title: bilingual,
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: [
+                    "id",
+                    "name",
+                    "description",
+                    "price",
+                    "note",
+                    "tag",
+                    "testimonial",
+                  ],
+                  properties: {
+                    id: { type: "string" },
+                    name: bilingual,
+                    description: bilingual,
+                    price: { type: ["string", "null"] },
+                    note: { anyOf: [bilingual, { type: "null" }] },
+                    tag: { anyOf: [bilingual, { type: "null" }] },
+                    testimonial,
+                  },
+                },
+              },
+            },
           },
         },
-        guide: { anyOf: [{ type: "object", additionalProperties: false, required: ["title", "body", "picks"], properties: { title: bilingual, body: bilingual, picks: { type: "array", items: { type: "string" } } } }, { type: "null" }] },
-        faqs: { type: "array", items: { type: "object", additionalProperties: false, required: ["question", "answer"], properties: { question: bilingual, answer: bilingual } } },
+        guide: {
+          anyOf: [
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["title", "body", "picks"],
+              properties: {
+                title: bilingual,
+                body: bilingual,
+                picks: { type: "array", items: { type: "string" } },
+              },
+            },
+            { type: "null" },
+          ],
+        },
+        faqs: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["question", "answer"],
+            properties: { question: bilingual, answer: bilingual },
+          },
+        },
         conceptLabel: { type: "string" },
       },
     },
     buildUser: (a) =>
-      `Compose the bilingual microsite from the approved artifacts. slug must be "${a.business?.slug}".\n\n${context(a)}`,
+      `Compose the bilingual microsite from the approved artifacts. slug must be "${a.business?.slug}". First determine an evidence-grounded brand personality and apply it consistently across palette, display copy, image treatment, and menu density. Give every section clear hierarchy and include every normalized item exactly once.\n\n${context(a)}`,
   },
 
   gbp_pack: {
@@ -522,4 +722,9 @@ export const CONTENT_ROLES = [
   "localization",
   "menu_testimonials",
 ];
-export const PUBLISH_TAIL = ["pdf_menu", "publisher_qa", "gbp_pack", "delivery_report"];
+export const PUBLISH_TAIL = [
+  "pdf_menu",
+  "publisher_qa",
+  "gbp_pack",
+  "delivery_report",
+];

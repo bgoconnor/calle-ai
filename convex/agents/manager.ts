@@ -11,7 +11,7 @@ import { callTool } from "../tools";
 
 const ROLE_BLURBS: Record<string, string> = {
   intake:
-    "Extracts canonical business facts + confidence + missing data from the sources.",
+    "Uses bounded live Linkup research to resolve identity and produce cited fact-level evidence, conflicts, and safe downstream claims.",
   menu_discovery:
     "Uses live Linkup search to find authoritative, comprehensive menu sources.",
   menu_normalization:

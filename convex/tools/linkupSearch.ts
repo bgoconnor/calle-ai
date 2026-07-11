@@ -4,6 +4,7 @@ import type { ToolContext } from "./types";
 export type LinkupSearchInput = {
   query: string;
   depth?: "standard" | "deep";
+  includeImages?: boolean;
   jobId?: Id<"jobs">;
   businessId?: Id<"businesses">;
 };
@@ -15,6 +16,7 @@ export type LinkupSearchOutput = {
     title: string;
     url: string;
     snippet: string;
+    type: "text" | "image";
   }>;
   retrievedAt: string;
 };
@@ -52,7 +54,8 @@ export async function linkupSearch(
     body: JSON.stringify({
       q: query,
       depth: input.depth ?? "standard",
-      outputType: "sourcedAnswer",
+      outputType: input.includeImages ? "searchResults" : "sourcedAnswer",
+      ...(input.includeImages ? { includeImages: true } : {}),
     }),
     signal: AbortSignal.timeout(input.depth === "deep" ? DEEP_TIMEOUT_MS : STANDARD_TIMEOUT_MS),
   });
@@ -67,15 +70,26 @@ export async function linkupSearch(
   const raw = (await response.json()) as {
     answer?: unknown;
     sources?: Array<Record<string, unknown>>;
+    results?: Array<Record<string, unknown>>;
   };
 
-  const results = Array.isArray(raw.sources)
-    ? raw.sources.map((source) => ({
+  const rawResults = Array.isArray(raw.sources)
+    ? raw.sources
+    : Array.isArray(raw.results)
+      ? raw.results
+      : Array.isArray(raw)
+        ? raw as Array<Record<string, unknown>>
+        : [];
+  const results = rawResults
+    .map((source) => ({
         title: String(source.name ?? source.title ?? "Untitled source"),
-        url: String(source.url ?? ""),
+        url: String(source.url ?? source.imageUrl ?? source.thumbnailUrl ?? ""),
         snippet: String(source.snippet ?? source.content ?? ""),
+        type: String(source.type ?? "").toLowerCase().includes("image") || Boolean(source.imageUrl)
+          ? "image" as const
+          : "text" as const,
       }))
-    : [];
+    .filter((source) => source.url);
 
   return {
     query,

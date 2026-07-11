@@ -48,7 +48,7 @@ export async function runMenuDiscovery(
     `Find a complete itemized menu with prices for the exact business ${name}. Search menu databases and ordering pages including AllMenus, MenuPages, Restaurantji, Grubhub, DoorDash, Toast, Square, and archived menu pages. Do not substitute similarly named restaurants.`,
     `Find readable menu images, menu PDFs, or itemized menu pages for ${name}. Extract section names, every visible item, description, and price exactly as shown, with the source URL.`,
   ];
-  const searches = [];
+  const searches: any[] = [];
 
   for (const query of queries) {
     const started = Date.now();
@@ -72,37 +72,48 @@ export async function runMenuDiscovery(
     });
   }
 
-  const menuCandidate = searches
-    .flatMap((search) => search.results)
-    .find((source) => /allmenus|menupages|restaurantji|grubhub|doordash|toasttab|squareup|\/menu/i.test(source.url));
-  if (menuCandidate) {
-    const query = `Use this exact menu source for ${name}: ${menuCandidate.url}. Extract the comprehensive menu into a sourced answer: every section, item name, description, and price visible on that page. Clearly state anything the page does not contain; do not add items from general knowledge or editorial articles.`;
+  const imageQuery = `Find every readable menu image or photographed menu page for the exact restaurant ${name}. A menu may span multiple images; return all distinct pages and collages, favoring recent uploads.`;
+  const imageSearch = await callTool(ctx, "linkup.search", {
+    query: imageQuery, depth: "standard", includeImages: true, businessId: args.businessId,
+  });
+  searches.push(imageSearch);
+
+  const candidatePattern = /allmenus|menupages|restaurantji|grubhub|doordash|toasttab|squareup|order|\/menu|\.pdf/i;
+  const editorialPattern = /sfchronicle|newspaper|magazine|blog|article|best-of/i;
+  const candidateUrls = [...new Set(searches.flatMap((search) => search.results)
+    .filter((source: any) => source.type !== "image" && candidatePattern.test(source.url) && !editorialPattern.test(source.url))
+    .map((source: any) => source.url))].slice(0, 4) as string[];
+  const pageEvidence: any[] = [];
+  for (const url of candidateUrls) {
     const started = Date.now();
-    const result = await callTool(ctx, "linkup.search", { query, depth: "deep", businessId: args.businessId });
-    searches.push(result);
-    await callTool(ctx, "trace.emit", {
-      jobId: args.jobId,
-      taskId: args.taskId,
-      parentRole: "Agency Manager",
-      role: ROLES.menu_discovery.name,
-      phase: "tool_call",
-      summary: `Deep-extracted menu candidate with ${result.results.length} supporting sources`,
-      input: { query, menuCandidateUrl: menuCandidate.url },
-      output: { sourceUrls: result.results.map((source) => source.url) },
-      toolName: "linkup.search",
-      durationMs: Date.now() - started,
-    });
+    try {
+      const fetched = await callTool(ctx, "linkup.fetch", { url, renderJs: true, extractImages: true });
+      pageEvidence.push({ ...fetched, images: fetched.images.map((image, index) => ({ ...image, pageOrder: index + 1 })) });
+      await callTool(ctx, "trace.emit", {
+        jobId: args.jobId, taskId: args.taskId, parentRole: "Agency Manager", role: ROLES.menu_discovery.name,
+        phase: "tool_call", summary: `Fetched menu candidate and ${fetched.images.length} image assets`,
+        input: { url }, output: { markdownCharacters: fetched.markdown.length, imageUrls: fetched.images.map((image) => image.url) },
+        toolName: "linkup.fetch", durationMs: Date.now() - started,
+      });
+    } catch (error) {
+      await callTool(ctx, "trace.emit", {
+        jobId: args.jobId, taskId: args.taskId, parentRole: "Agency Manager", role: ROLES.menu_discovery.name,
+        phase: "error", summary: `Menu candidate fetch failed; continuing autonomously`, input: { url },
+        output: { error: error instanceof Error ? error.message : String(error) }, toolName: "linkup.fetch", durationMs: Date.now() - started,
+      });
+    }
   }
 
   const evidence = searches.flatMap((search) =>
-    search.results.map((result) => ({ ...result, answer: search.answer })),
+    search.results.map((result: any) => ({ ...result, answer: search.answer })),
   );
   const llm = await callStructured<any>({
     system: ROLES.menu_discovery.system,
     user:
       `BUSINESS:\n${JSON.stringify(args.context.business, null, 2)}\n\n` +
       `LIVE LINKUP EVIDENCE:\n${JSON.stringify(evidence, null, 2)}\n\n` +
-      `Select the authoritative menu sources. searchesRun must be ${searches.length}.`,
+      `FETCHED MENU PAGES (markdown is direct source content):\n${JSON.stringify(pageEvidence.map((page) => ({ ...page, markdown: page.markdown.slice(0, 30000) })), null, 2)}\n\n` +
+      `Select a canonical source with a recency bias and make an executive decision; do not request approval. Editorial articles are context only. searchesRun must be ${searches.length}.`,
     schemaName: ROLES.menu_discovery.outputName,
     schema: ROLES.menu_discovery.outputSchema,
   });
@@ -112,6 +123,13 @@ export async function runMenuDiscovery(
   llm.data.selectedSourceUrls = llm.data.selectedSourceUrls.filter((url: string) => validUrls.has(url));
   llm.data.searchesRun = searches.length;
   llm.data.searchEvidence = searches.map((search) => ({ query: search.query, answer: search.answer }));
+  llm.data.pageEvidence = pageEvidence;
+  llm.data.imageEvidence = [
+    ...imageSearch.results.filter((result) => result.type === "image").map((result, index) => ({ ...result, pageOrder: index + 1, retrievedAt: imageSearch.retrievedAt })),
+    ...pageEvidence.flatMap((page) => page.images.map((image: any) => ({ ...image, sourceUrl: page.url, retrievedAt: page.retrievedAt }))),
+  ];
+  const selectedPages = pageEvidence.filter((page) => llm.data.selectedSourceUrls.includes(page.url));
+  llm.data.canonicalSourceUrl = llm.data.canonicalSourceUrl ?? selectedPages[0]?.url ?? llm.data.selectedSourceUrls[0] ?? null;
 
   return {
     data: llm.data,

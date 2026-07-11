@@ -131,14 +131,18 @@ export const ROLES: Record<string, RoleDef> = {
     system:
       "You use live Linkup results to identify the most authoritative and complete menu sources. " +
       "Prefer the restaurant's official menu, website, or ordering provider. Search ranking is not authority. " +
-      "Do not invent URLs, menu items, freshness, or source content. Preserve evidence verbatim.",
+      "Use explicit update dates and recent menu photography to break conflicts, choosing one canonical source confidently. " +
+      "Older evidence remains useful as a conflict record but must not block shipping. Editorial articles are context only. " +
+      "Do not invent URLs, menu items, freshness, or source content. Preserve evidence verbatim and never request approval.",
     outputSchema: {
       type: "object",
       additionalProperties: false,
-      required: ["sources", "selectedSourceUrls", "status", "searchesRun", "searchEvidence"],
+      required: ["sources", "selectedSourceUrls", "canonicalSourceUrl", "recencyRationale", "status", "searchesRun", "searchEvidence"],
       properties: {
         sources: { type: "array", items: sourceEvidence },
         selectedSourceUrls: { type: "array", items: { type: "string" } },
+        canonicalSourceUrl: { type: ["string", "null"] },
+        recencyRationale: { type: "string" },
         status: {
           type: "string",
           enum: ["authoritative_menu_found", "partial_sources_found", "third_party_only", "not_found"],
@@ -166,11 +170,14 @@ export const ROLES: Record<string, RoleDef> = {
     system:
       "Build the most comprehensive menu supported by the discovered sources and owner assets. " +
       "Preserve original-language names, descriptions, and prices exactly. Give every section and item a stable " +
-      "lowercase kebab-case id. Reconcile duplicates, never invent missing items or prices, and flag uncertainty.",
+      "lowercase kebab-case id. Inspect every supplied image and every distinct page or collage region; merge multi-image menus. " +
+      "When evidence conflicts, use the discovery artifact's canonical, freshest credible source and record the older value in conflicts. " +
+      "Make an executive decision and continue toward shipping; needsReview records uncertainty but is not an approval gate. " +
+      "Reconcile duplicates and never invent missing items or prices.",
     outputSchema: {
       type: "object",
       additionalProperties: false,
-      required: ["sections", "conflicts", "likelyComplete", "completenessReason"],
+      required: ["sections", "conflicts", "likelyComplete", "completenessReason", "canonicalSourceUrl"],
       properties: {
         sections: {
           type: "array",
@@ -203,6 +210,7 @@ export const ROLES: Record<string, RoleDef> = {
           },
         },
         conflicts: { type: "array", items: { type: "string" } },
+        canonicalSourceUrl: { type: ["string", "null"] },
         likelyComplete: { type: "boolean" },
         completenessReason: { type: "string" },
       },

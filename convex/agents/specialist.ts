@@ -80,13 +80,18 @@ export const runSpecialist = internalAction({
     }
 
     // Vision: pass menu/service photo URLs when the role reads images.
-    const images = roleDef.usesVision
-      ? context.assets
+    const ownerImages = context.assets
           .filter(
             (a: any) =>
               (a.kind === "menu_photo" || a.kind === "service_list") && a.url,
           )
-          .map((a: any) => a.url as string)
+          .map((a: any) => a.url as string);
+    const discoveredImages = role === "menu_normalization"
+      ? [...context.artifacts].reverse().find((artifact: any) => artifact.kind === "menu_sources")?.data?.imageEvidence
+          ?.map((image: any) => image.url).filter(Boolean) ?? []
+      : [];
+    const images = roleDef.usesVision
+      ? [...new Set([...discoveredImages, ...ownerImages])].slice(0, 12) as string[]
       : undefined;
 
     try {

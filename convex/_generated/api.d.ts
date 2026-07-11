@@ -23,6 +23,7 @@ import type * as seed from "../seed.js";
 import type * as tools_citationPersistenceMutations from "../tools/citationPersistenceMutations.js";
 import type * as tools_citationsPersist from "../tools/citationsPersist.js";
 import type * as tools_index from "../tools/index.js";
+import type * as tools_linkupFetch from "../tools/linkupFetch.js";
 import type * as tools_linkupSearch from "../tools/linkupSearch.js";
 import type * as tools_registry from "../tools/registry.js";
 import type * as tools_traceEmit from "../tools/traceEmit.js";
@@ -52,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   "tools/citationPersistenceMutations": typeof tools_citationPersistenceMutations;
   "tools/citationsPersist": typeof tools_citationsPersist;
   "tools/index": typeof tools_index;
+  "tools/linkupFetch": typeof tools_linkupFetch;
   "tools/linkupSearch": typeof tools_linkupSearch;
   "tools/registry": typeof tools_registry;
   "tools/traceEmit": typeof tools_traceEmit;

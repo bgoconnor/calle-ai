@@ -15,7 +15,7 @@
     "deploy": "npm run build && wrangler pages deploy dist --project-name calle-ai"
   },
   "dependencies": {
-    "convex": "^1.27.0",
+    "convex": "^1.42.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

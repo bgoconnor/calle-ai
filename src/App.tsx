@@ -1,0 +1,63 @@
+import { useEffect, useState } from "react";
+import { AgencyIntake } from "./features/intake";
+import { ControlRoom, mockControlRoomAdapter } from "./features/control-room";
+import { platformConfig } from "./lib/platform";
+import { PublicSiteRoute } from "./public/PublicSiteRoute";
+import "./app.css";
+
+type Route =
+  | { kind: "intake" }
+  | { kind: "control"; jobId?: string }
+  | { kind: "site"; slug: string };
+
+function readRoute(): Route {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+  const site = path.match(/^\/b\/([^/]+)$/);
+  if (site) return { kind: "site", slug: decodeURIComponent(site[1]) };
+  const job = path.match(/^\/jobs\/([^/]+)$/);
+  if (job) return { kind: "control", jobId: decodeURIComponent(job[1]) };
+  if (path === "/jobs") return { kind: "control" };
+  return { kind: "intake" };
+}
+
+export function App() {
+  const [route, setRoute] = useState<Route>(() => readRoute());
+
+  useEffect(() => {
+    const onPopState = () => setRoute(readRoute());
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const navigate = (path: string) => {
+    window.history.pushState({}, "", path);
+    setRoute(readRoute());
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  if (route.kind === "site") return <PublicSiteRoute slug={route.slug} />;
+
+  return (
+    <div className="app-frame">
+      <header className="app-nav">
+        <button className="app-wordmark" onClick={() => navigate("/")}>
+          <span>Calle</span> AI
+        </button>
+        <nav aria-label="Agency navigation">
+          <button className={route.kind === "intake" ? "active" : ""} onClick={() => navigate("/")}>New job</button>
+          <button className={route.kind === "control" ? "active" : ""} onClick={() => navigate("/jobs")}>Control room</button>
+          <a href="/b/yucatasia">Demo storefront ↗</a>
+        </nav>
+      </header>
+
+      {route.kind === "intake" ? (
+        <AgencyIntake
+          integrationWorkerUrl={platformConfig.integrationWorkerUrl}
+          onLaunched={({ jobId }) => navigate(`/jobs/${jobId}`)}
+        />
+      ) : (
+        <ControlRoom adapter={mockControlRoomAdapter} initialJobId={route.jobId} />
+      )}
+    </div>
+  );
+}

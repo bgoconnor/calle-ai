@@ -1,5 +1,9 @@
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { App } from "./App";
 
-// Temporary application entrypoint. Product UI workstreams may replace only this
-// rendered node; platform configuration stays in src/lib/platform.ts.
-createRoot(document.getElementById("root")!).render(<div data-app="calle-ai" />);
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

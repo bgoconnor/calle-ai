@@ -139,3 +139,25 @@ export const setJobStatus = internalMutation({
     await ctx.db.patch(jobId, patch);
   },
 });
+
+export const retractBusinessDeployments = internalMutation({
+  args: { jobId: v.id("jobs"), reason: v.string() },
+  handler: async (ctx, { jobId, reason }) => {
+    const job = await ctx.db.get(jobId);
+    if (!job) throw new Error("job not found");
+    const business = await ctx.db.get(job.businessId);
+    if (!business) throw new Error("business not found");
+    const deployments = await ctx.db.query("deployments").withIndex("by_slug", (q) => q.eq("slug", business.slug)).collect();
+    const published = deployments.filter((deployment) => deployment.status === "published");
+    for (const deployment of published) await ctx.db.patch(deployment._id, { status: "superseded" });
+    await ctx.db.insert("traceEvents", {
+      jobId,
+      parentRole: "Agency Manager",
+      role: "Publisher & QA",
+      phase: "publish",
+      summary: published.length ? `Retracted ${published.length} published deployment(s): ${reason}` : `Retraction evaluated; no live deployment existed: ${reason}`,
+      output: { retractedDeploymentIds: published.map((deployment) => deployment._id), reason },
+    });
+    return published.length;
+  },
+});

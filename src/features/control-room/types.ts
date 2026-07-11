@@ -4,6 +4,7 @@ export type ApprovalStatus = "pending" | "approved" | "changes_requested" | "esc
 
 export type ControlJob = {
   id: string; businessId: string; businessName: string; category: string; city: string;
+  approvalMode?: "autonomous" | "require_approval";
   status: JobStatus; brief: string; managerPlan: Array<{ agent: string; task: string; tools: string[] }>;
   publishState: "draft" | "published" | "unpublished"; publishedUrl?: string; createdAt: number; updatedAt: number;
 };

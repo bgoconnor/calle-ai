@@ -3,13 +3,14 @@ import type { BriefInput, StructuredBrief } from "../../lib/agency-contract";
 import { createMockIntakeAdapter } from "./mock-adapter";
 import type { BriefDraft, IntakeProps, VoiceState } from "./types";
 import "./intake.css";
+import "./automation-settings.css";
 
 const examples = [
   { label: "Yucatasia", brief: "Create a Spanish-first bilingual website for Yucatasia in the Mission. Use public sources and menu photos. Preserve regional Yucatán dish names and explain them for English-speaking visitors.", name: "Yucatasia", city: "San Francisco", category: "Yucatán restaurant" },
   { label: "Chely’s", brief: "Turn Chely’s Beauty Salon’s Maps listing and service photos into a polished Spanish-English microsite. Keep the storefront’s bright pink, aqua, and lavender energy.", name: "Chely’s Beauty Salon", city: "San Francisco", category: "Beauty salon" },
 ];
 
-const emptyDraft: BriefDraft = { brief: "", businessName: "", city: "", category: "", primaryLanguage: "es", secondaryLanguage: "en", sourceUrls: [], files: [] };
+const emptyDraft: BriefDraft = { brief: "", businessName: "", city: "", category: "", primaryLanguage: "es", secondaryLanguage: "en", sourceUrls: [], files: [], approvalMode: "autonomous" };
 
 function listValue(value: string[]) { return value.filter(Boolean).join("\n"); }
 
@@ -40,7 +41,7 @@ export function AgencyIntake({ adapter, integrationWorkerUrl, onLaunched, initia
     if (draft.brief.trim().length < 24) { setError("Describe the agency assignment in at least a sentence so Calle AI can plan the work."); return; }
     setLoading("review"); setError(null);
     try {
-      const input: BriefInput = { brief: draft.brief.trim(), businessName: draft.businessName.trim() || "Business to confirm", city: draft.city.trim() || "Location to confirm", category: draft.category.trim() || "Local business", primaryLanguage: draft.primaryLanguage, secondaryLanguage: draft.secondaryLanguage, sourceUrls: draft.sourceUrls };
+      const input: BriefInput = { brief: draft.brief.trim(), businessName: draft.businessName.trim() || "Business to confirm", city: draft.city.trim() || "Location to confirm", category: draft.category.trim() || "Local business", primaryLanguage: draft.primaryLanguage, secondaryLanguage: draft.secondaryLanguage, sourceUrls: draft.sourceUrls, approvalMode: draft.approvalMode };
       const result = await client.createDraft(input);
       setStructured(result.structuredBrief); setJobId(result.jobId);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Calle AI could not prepare the job brief. Try again."); }
@@ -92,6 +93,7 @@ export function AgencyIntake({ adapter, integrationWorkerUrl, onLaunched, initia
     <div className="voice-row"><button type="button" className={`voice-button ${voiceState === "recording" ? "is-recording" : ""}`} onClick={() => void toggleRecording()} disabled={voiceState === "transcribing" || voiceState === "unavailable"}>{voiceState === "recording" ? "Stop recording" : voiceState === "transcribing" ? "Transcribing…" : "Add a voice brief"}</button>{voiceMessage && <span className="voice-message" role="status">{voiceMessage}</span>}</div>
     <div className="field-grid"><Field label="Business name" value={draft.businessName} onChange={(value) => setField("businessName", value)} placeholder="e.g. Yucatasia" /><Field label="City or neighborhood" value={draft.city} onChange={(value) => setField("city", value)} placeholder="e.g. Mission District, SF" /><Field label="Business type" value={draft.category} onChange={(value) => setField("category", value)} placeholder="e.g. Restaurant or salon" /></div>
     <section className="source-panel" aria-labelledby="sources-title"><div><h2 id="sources-title">Helpful sources <span>optional</span></h2><p>Links and photos give the agency evidence; they are never treated as approval to invent missing facts.</p></div><div className="source-add"><input aria-label="Source URL" value={urlInput} onChange={(event) => setUrlInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addUrl(); } }} placeholder="https://maps.google.com/…" /><button type="button" onClick={addUrl}>Add link</button></div><div className="source-chips">{draft.sourceUrls.map((url) => <button type="button" className="source-chip" key={url} onClick={() => setField("sourceUrls", draft.sourceUrls.filter((item) => item !== url))}>{url.replace(/^https?:\/\//, "")} <span>×</span></button>)}</div><label className="upload-zone"><input type="file" multiple accept="image/*,.pdf" onChange={(event) => setField("files", Array.from(event.target.files ?? []))} /><strong>Attach menu or service photos</strong><small>{draft.files.length ? `${draft.files.length} file${draft.files.length === 1 ? "" : "s"} ready for the agency` : "Images and PDFs only — optional for this demo"}</small></label></section>
+    <label className="approval-setting"><input type="checkbox" checked={draft.approvalMode === "require_approval"} onChange={(event) => setField("approvalMode", event.target.checked ? "require_approval" : "autonomous")} /><span><b>Require approval before publishing</b><small>Off by default. Autonomous jobs publish when checks pass and retract when critical checks fail.</small></span></label>
     {error && <p className="intake-error" role="alert">{error}</p>}
     <div className="intake-actions"><span>Your assignment is reviewed before agents begin.</span><button className="primary-action" type="button" onClick={() => void submitForReview()} disabled={loading === "review"}>{loading === "review" ? "Preparing brief…" : "Create agency brief"}</button></div>
   </section></main>;

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { createMockIntakeAdapter } from "./mock-adapter";
 import type { IntakeAdapter, LaunchResult } from "./types";
 import "./quick-intake.css";
+import "./automation-settings.css";
 
 type QuickIntakeProps = {
   adapter?: IntakeAdapter;
@@ -16,6 +17,7 @@ export function QuickIntake({ adapter, onLaunched, onAdvanced }: QuickIntakeProp
   const [brief, setBrief] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [requireApproval, setRequireApproval] = useState(false);
 
   const submit = async () => {
     if (brief.trim().length < 20) {
@@ -33,6 +35,7 @@ export function QuickIntake({ adapter, onLaunched, onAdvanced }: QuickIntakeProp
         category: "Local business",
         primaryLanguage: "es",
         secondaryLanguage: "en",
+        approvalMode: requireApproval ? "require_approval" : "autonomous",
       });
       await client.updateDraft(draft.jobId, { brief: brief.trim(), structuredBrief: draft.structuredBrief });
       onLaunched?.(await client.launch(draft.jobId));
@@ -72,6 +75,7 @@ export function QuickIntake({ adapter, onLaunched, onAdvanced }: QuickIntakeProp
         </div>
 
         {error && <p className="quick-error" role="alert">{error}</p>}
+        <label className="quick-approval"><input type="checkbox" checked={requireApproval} onChange={(event) => setRequireApproval(event.target.checked)} /><span>Require approval before publishing</span></label>
         <button className="quick-example" onClick={() => setBrief(example)}>Try an example</button>
         {onAdvanced && <button className="quick-advanced" onClick={onAdvanced}>Add sources and detailed requirements</button>}
 

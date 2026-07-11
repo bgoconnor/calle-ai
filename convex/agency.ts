@@ -57,6 +57,7 @@ export const createJobFromPrompt = mutation({
     mapsUrl: v.optional(v.string()),
     address: v.optional(v.string()),
     sourceUrls: v.optional(v.array(v.string())),
+    approvalMode: v.optional(v.union(v.literal("autonomous"), v.literal("require_approval"))),
   },
   handler: async (ctx, args) => {
     const name = args.businessName?.trim() || "Business pending research";
@@ -77,6 +78,7 @@ export const createJobFromPrompt = mutation({
     const jobId = await ctx.db.insert("jobs", {
       businessId,
       status: "queued",
+      approvalMode: args.approvalMode ?? "autonomous",
       requiredDeliverables: ["microsite", "catalog", "gbp_pack", "report"],
       guardrails: defaultGuardrails.join("\n"),
     });
@@ -109,12 +111,12 @@ export const createJobFromPrompt = mutation({
 
 /** Compatibility entrypoint for the detailed intake UI. */
 export const createJob = mutation({
-  args: { brief: v.string(), businessName: v.string(), city: v.string(), category: v.string(), primaryLanguage: v.optional(v.string()), secondaryLanguage: v.optional(v.string()), sourceUrls: v.optional(v.array(v.string())) },
+  args: { brief: v.string(), businessName: v.string(), city: v.string(), category: v.string(), primaryLanguage: v.optional(v.string()), secondaryLanguage: v.optional(v.string()), sourceUrls: v.optional(v.array(v.string())), approvalMode: v.optional(v.union(v.literal("autonomous"), v.literal("require_approval"))) },
   handler: async (ctx, args) => {
     const slug = slugify(args.businessName);
     const existing = await ctx.db.query("businesses").withIndex("by_slug", (q) => q.eq("slug", slug)).unique();
     const businessId = existing?._id ?? await ctx.db.insert("businesses", { slug, name: args.businessName, type: args.category, languages: [args.primaryLanguage || "es", args.secondaryLanguage || "en"], address: args.city });
-    const jobId = await ctx.db.insert("jobs", { businessId, status: "queued", requiredDeliverables: ["microsite", "catalog", "gbp_pack", "report"], guardrails: defaultGuardrails.join("\n") });
+    const jobId = await ctx.db.insert("jobs", { businessId, status: "queued", approvalMode: args.approvalMode ?? "autonomous", requiredDeliverables: ["microsite", "catalog", "gbp_pack", "report"], guardrails: defaultGuardrails.join("\n") });
     const briefArtifactId = await ctx.db.insert("artifacts", { jobId, businessId, kind: "brief", version: 1, producedByRole: "Operator", data: { prompt: args.brief, sourceUrls: args.sourceUrls ?? [] }, confidence: 1 });
     await ctx.db.patch(jobId, { briefArtifactId });
     await ctx.db.insert("policies", { scope: "business", businessId, key: "operator_brief", value: args.brief, version: 1, sourceArtifactId: briefArtifactId });
@@ -306,7 +308,7 @@ export const getControlRoomJobs = query({
     return Promise.all(jobs.map(async (job) => {
       const [business, brief, deployments] = await Promise.all([ctx.db.get(job.businessId), job.briefArtifactId ? ctx.db.get(job.briefArtifactId) : null, ctx.db.query("deployments").withIndex("by_job", (q) => q.eq("jobId", job._id)).collect()]);
       const published = deployments.find((item) => item.status === "published");
-      return { id: job._id, businessId: job.businessId, businessName: business?.name || "Unknown business", category: business?.type || "Local business", city: business?.address || "Research pending", status: portableJobStatus(job.status, Boolean(published)), brief: String((brief?.data as { prompt?: string } | undefined)?.prompt || ""), managerPlan: [], publishState: published ? "published" : "draft", publishedUrl: published?.url, createdAt: job._creationTime, updatedAt: job.finishedAt || job.startedAt || job._creationTime };
+      return { id: job._id, businessId: job.businessId, businessName: business?.name || "Unknown business", category: business?.type || "Local business", city: business?.address || "Research pending", status: portableJobStatus(job.status, Boolean(published)), approvalMode: job.approvalMode ?? "autonomous", brief: String((brief?.data as { prompt?: string } | undefined)?.prompt || ""), managerPlan: [], publishState: published ? "published" : "draft", publishedUrl: published?.url, createdAt: job._creationTime, updatedAt: job.finishedAt || job.startedAt || job._creationTime };
     }));
   },
 });
@@ -340,7 +342,7 @@ export const getControlRoomJob = query({
       return { id: artifact._id, taskId: artifact.taskId, kind: artifact.kind, title: titleFor(artifact.kind), payload: artifact.data, confidence: artifact.confidence ?? 0, approvalStatus: escalation?.status === "open" ? "escalated" : escalation?.status === "approved" ? "approved" : "pending", version: artifact.version, createdAt: artifact._creationTime };
     });
     return {
-      job: { id: job._id, businessId: job.businessId, businessName: business?.name || "Unknown business", category: business?.type || "Local business", city: business?.address || "Research pending", status: portableJobStatus(job.status, Boolean(published)), brief: String((brief?.data as { prompt?: string } | undefined)?.prompt || ""), managerPlan: plan?.steps.map((step) => ({ agent: step.role, task: step.purpose, tools: step.inputKinds })) || [], publishState: published ? "published" : "draft", publishedUrl: published?.url, createdAt: job._creationTime, updatedAt: job.finishedAt || job.startedAt || job._creationTime },
+      job: { id: job._id, businessId: job.businessId, businessName: business?.name || "Unknown business", category: business?.type || "Local business", city: business?.address || "Research pending", status: portableJobStatus(job.status, Boolean(published)), approvalMode: job.approvalMode ?? "autonomous", brief: String((brief?.data as { prompt?: string } | undefined)?.prompt || ""), managerPlan: plan?.steps.map((step) => ({ agent: step.role, task: step.purpose, tools: step.inputKinds })) || [], publishState: published ? "published" : "draft", publishedUrl: published?.url, createdAt: job._creationTime, updatedAt: job.finishedAt || job.startedAt || job._creationTime },
       tasks: [managerTask, ...portableTasks],
       artifacts: portableArtifacts,
       approvals: approvals.map((item) => ({ id: item._id, taskId: item.taskId, type: item.type, reason: item.reason, status: item.status, resolutionNote: item.resolutionNote })),

@@ -1,5 +1,5 @@
 import { action } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { v } from "convex/values";
 import { ROLES, PUBLISH_TAIL } from "./agents/roles";
 import { callTool } from "./tools";
@@ -20,8 +20,17 @@ const REVIEWED = new Set([
 // Manager reviewing key artifacts and requesting one revision when needed.
 // Trigger from the operator board: await runJob({ jobId })
 export const runJob = action({
-  args: { jobId: v.id("jobs") },
-  handler: async (ctx, { jobId }): Promise<{ status: string }> => {
+  args: { jobId: v.id("jobs"), publicBaseUrl: v.optional(v.string()) },
+  handler: async (ctx, { jobId, publicBaseUrl }): Promise<{ status: string; url?: string }> => {
+    const initialContext = await ctx.runQuery(internal.agents.helpers.getJobContext, { jobId });
+    const approvalMode = initialContext.job.approvalMode ?? "autonomous";
+    const failJob = async (error: string) => {
+      await ctx.runMutation(internal.agents.helpers.setJobStatus, { jobId, status: "failed", error, finishedAt: Date.now() });
+      if (approvalMode === "autonomous") {
+        await ctx.runMutation(internal.agents.helpers.retractBusinessDeployments, { jobId, reason: error });
+      }
+      return { status: "failed" as const };
+    };
     await ctx.runMutation(internal.agents.helpers.setJobStatus, {
       jobId,
       status: "planning",
@@ -65,13 +74,7 @@ export const runJob = action({
       );
 
       if (res.status === "failed") {
-        await ctx.runMutation(internal.agents.helpers.setJobStatus, {
-          jobId,
-          status: "failed",
-          error: `Step ${step.role} failed`,
-          finishedAt: Date.now(),
-        });
-        return { status: "failed" };
+        return await failJob(`Step ${step.role} failed`);
       }
 
       // Manager review + single revision cycle.
@@ -93,31 +96,37 @@ export const runJob = action({
             revisionNote: review.revisionInstruction,
           });
           if (res.status === "failed") {
-            await ctx.runMutation(internal.agents.helpers.setJobStatus, {
-              jobId,
-              status: "failed",
-              error: `Revision of ${step.role} failed`,
-              finishedAt: Date.now(),
-            });
-            return { status: "failed" };
+            return await failJob(`Revision of ${step.role} failed`);
           }
         }
       }
     }
 
-    await ctx.runMutation(internal.agents.helpers.setJobStatus, {
-      jobId,
-      status: "completed",
-      finishedAt: Date.now(),
-    });
-    await callTool(ctx, "trace.emit", {
-      jobId,
-      role: "Publisher & QA Specialist",
-      phase: "publish",
-      summary:
-        "Job completed — microsite, catalog, GBP pack, and delivery report ready",
-    });
+    const completedContext = await ctx.runQuery(internal.agents.helpers.getJobContext, { jobId });
+    const latest = (kind: string) => [...completedContext.artifacts].reverse().find((artifact) => artifact.kind === kind)?.data as any;
+    const blockers: string[] = [];
+    if (!latest("microsite")) blockers.push("no microsite artifact was produced");
+    if (/restaurant|food|bakery|cafe/i.test(completedContext.business?.type ?? "")) {
+      const menu = latest("normalized_menu");
+      const itemCount = (menu?.sections ?? []).reduce((sum: number, section: any) => sum + (section.items?.length ?? 0), 0);
+      if (!itemCount) blockers.push("no source-supported menu items were found");
+      if (menu?.likelyComplete === false) blockers.push("the normalized menu is explicitly incomplete");
+    }
 
-    return { status: "completed" };
+    if (approvalMode === "require_approval") {
+      await ctx.runMutation(internal.agents.helpers.setJobStatus, {
+        jobId,
+        status: "awaiting_approval",
+        ...(blockers.length ? { error: `Publish review required: ${blockers.join("; ")}` } : {}),
+        finishedAt: Date.now(),
+      });
+      await callTool(ctx, "trace.emit", { jobId, role: "Publisher & QA Specialist", phase: "review", summary: blockers.length ? `Waiting for required approval with blockers: ${blockers.join("; ")}` : "Waiting for required operator approval before publishing" });
+      return { status: "awaiting_approval" };
+    }
+
+    if (blockers.length) return await failJob(`Autonomous publish blocked: ${blockers.join("; ")}`);
+
+    const published = await ctx.runMutation(api.agency.publishJob, { jobId, ...(publicBaseUrl ? { publicBaseUrl } : {}) });
+    return { status: "published", url: published.url };
   },
 });

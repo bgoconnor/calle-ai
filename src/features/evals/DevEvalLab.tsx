@@ -49,7 +49,7 @@ export function DevEvalLab({ convexUrl, onOpenJob }: { convexUrl?: string; onOpe
       setJobId(id); setState("running");
       const [baselineResult, agencyResult] = await Promise.allSettled([
         client.action(api.evals.runMenuBaseline, { prompt, businessName }),
-        client.action(api.orchestrator.runJob, { jobId: created.jobId }),
+        client.action(api.orchestrator.runJob, { jobId: created.jobId, publicBaseUrl: window.location.origin }),
       ]);
       if (baselineResult.status === "fulfilled") setBaseline(baselineResult.value as BaselineResult);
       if (agencyResult.status === "rejected") throw agencyResult.reason;

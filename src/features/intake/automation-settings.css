@@ -1,0 +1,47 @@
+.approval-setting,
+.quick-approval {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.approval-setting {
+  margin-top: 18px;
+  padding: 15px;
+  border: 1px solid rgba(24, 35, 30, 0.14);
+  border-radius: 12px;
+  background: #f8faf4;
+}
+
+.quick-approval {
+  width: max-content;
+  margin: 16px auto 0;
+  color: #667068;
+  font-size: 12px;
+}
+
+.approval-setting input,
+.quick-approval input {
+  margin-top: 3px;
+  accent-color: #e6583e;
+}
+
+.approval-setting span,
+.approval-setting b,
+.approval-setting small {
+  display: block;
+}
+
+.approval-setting b {
+  color: #18231e;
+  font-size: 13px;
+}
+
+.approval-setting small {
+  margin-top: 3px;
+  color: #6e776f;
+  font-size: 11px;
+  line-height: 1.4;
+}

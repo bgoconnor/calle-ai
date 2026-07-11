@@ -27,6 +27,7 @@ export default defineSchema({
   jobs: defineTable({
     businessId: v.id("businesses"),
     status: jobStatus,
+    approvalMode: v.optional(v.union(v.literal("autonomous"), v.literal("require_approval"))),
     requiredDeliverables: v.array(v.string()), // ["microsite","catalog","gbp_pack","report"]
     guardrails: v.optional(v.string()), // brand/tone guardrails from the operator
     briefArtifactId: v.optional(v.id("artifacts")), // ElevenLabs transcript → policy

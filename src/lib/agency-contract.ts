@@ -12,6 +12,7 @@ export type BriefInput = {
   primaryLanguage?: string;
   secondaryLanguage?: string;
   sourceUrls?: string[];
+  approvalMode?: "autonomous" | "require_approval";
 };
 
 export type StructuredBrief = {

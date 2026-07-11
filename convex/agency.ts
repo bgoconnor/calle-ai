@@ -75,6 +75,15 @@ export const createJobFromPrompt = mutation({
       address: args.address,
       notes: "Business identity and facts must be verified by the research agent.",
     });
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        ...(args.businessType ? { type: args.businessType } : {}),
+        ...(args.languages?.length ? { languages: args.languages } : {}),
+        ...(args.mapsUrl ? { mapsUrl: args.mapsUrl } : {}),
+        ...(args.address ? { address: args.address } : {}),
+        notes: "Business identity and facts must be re-verified by the research agent for this job.",
+      });
+    }
     const jobId = await ctx.db.insert("jobs", {
       businessId,
       status: "queued",

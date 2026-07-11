@@ -11,7 +11,8 @@ into portable frontend contracts.
 - `agency.launchDeterministicRun` — seeded agent workflow using native records.
 - `agency.approveEscalation` / `agency.approveArtifact` — resolve exceptions.
 - `agency.requestTaskRevision` / `agency.retryTask` — targeted iteration.
-- `agency.publishJob` — publish the latest approved microsite artifact.
+- `agency.requestArtifactRevision` — UI-friendly artifact-to-task revision.
+- `agency.publishJob` / `agency.unpublishJob` — control the current deployment.
 
 ## Read API
 

@@ -197,6 +197,19 @@ export const requestTaskRevision = mutation({
   },
 });
 
+export const requestArtifactRevision = mutation({
+  args: { artifactId: v.id("artifacts"), note: v.string() },
+  handler: async (ctx, args) => {
+    const artifact = await ctx.db.get(args.artifactId);
+    if (!artifact?.taskId) throw new Error("Artifact has no originating task");
+    const task = await ctx.db.get(artifact.taskId);
+    if (!task) throw new Error("Task not found");
+    await ctx.db.patch(task._id, { status: "revision_requested", reviewNote: args.note });
+    await ctx.db.insert("traceEvents", { jobId: task.jobId, taskId: task._id, parentRole: "Operator", role: task.role, phase: "review", summary: "Operator requested an artifact revision", input: { artifactId: artifact._id, note: args.note } });
+    return task._id;
+  },
+});
+
 export const retryTask = mutation({
   args: { taskId: v.id("tasks") },
   handler: async (ctx, { taskId }) => {
@@ -250,6 +263,19 @@ export const publishBusiness = mutation({
     const deploymentId = await ctx.db.insert("deployments", { jobId: job._id, businessId, slug: business.slug, version, url, micrositeArtifactId: microsite._id, status: "published" });
     await ctx.db.patch(job._id, { status: "completed", finishedAt: Date.now() });
     return { deploymentId, slug: business.slug, url };
+  },
+});
+
+export const unpublishJob = mutation({
+  args: { jobId: v.id("jobs") },
+  handler: async (ctx, { jobId }) => {
+    const job = await ctx.db.get(jobId);
+    if (!job) throw new Error("Job not found");
+    const deployments = await ctx.db.query("deployments").withIndex("by_job", (q) => q.eq("jobId", jobId)).collect();
+    for (const deployment of deployments.filter((item) => item.status === "published")) await ctx.db.patch(deployment._id, { status: "superseded" });
+    await ctx.db.patch(jobId, { status: "awaiting_approval" });
+    await ctx.db.insert("traceEvents", { jobId, parentRole: "Operator", role: "Publisher & QA", phase: "publish", summary: "Public deployment was unpublished", output: { unpublished: true } });
+    return jobId;
   },
 });
 

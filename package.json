@@ -1,0 +1,24 @@
+{
+  "name": "calle-ai",
+  "version": "1.0.0",
+  "description": "Calle AI — an AI-operated local-presence agency (Hermes Buildathon). Multi-agent system that publishes bilingual local-business presence packs.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bgoconnor/calle-ai.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/bgoconnor/calle-ai/issues"
+  },
+  "homepage": "https://github.com/bgoconnor/calle-ai#readme",
+  "dependencies": {
+    "convex": "^1.42.1"
+  }
+}

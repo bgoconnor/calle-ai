@@ -1,12 +1,27 @@
 # Calle AI Convex contract
 
-`agency.createJob` accepts the natural-language operator brief and returns a reviewable structured brief.
-`agency.launchDeterministicRun` supplies an offline/demo agency run while real model, Linkup, and OCR actions are being attached.
-`agency.getJob` powers the job control room; it returns the business, tasks, source assets, artifacts, trace events, and citations.
-`agency.updateBrief`, `agency.approveArtifact`, and `agency.retryTask` provide the nontechnical operator controls; `agency.publishBusiness` flips a reviewed `siteVersion` live.
-`agency.getPublishedSite({ slug })` returns only a published `siteVersions` document for the public `/b/:slug` renderer.
+The normalized remote schema is authoritative. Public functions in `agency.ts`
+project native plans, tasks, artifacts, approvals, deployments, and trace events
+into portable frontend contracts.
 
-The canonical public render schema is [`src/public/types.ts`](../src/public/types.ts). `siteVersions.content` must match that `PublishedSite` shape exactly; the renderer treats it as data, not generated code. Unverified fields should not appear as facts in customer-facing views.
+## Write API
+
+- `agency.createJobFromPrompt` — minimal NL prompt entrypoint.
+- `agency.createJob` / `agency.updateBrief` — detailed-intake compatibility.
+- `agency.launchDeterministicRun` — seeded agent workflow using native records.
+- `agency.approveEscalation` / `agency.approveArtifact` — resolve exceptions.
+- `agency.requestTaskRevision` / `agency.retryTask` — targeted iteration.
+- `agency.publishJob` — publish the latest approved microsite artifact.
+
+## Read API
+
+- `agency.getControlRoomJobs` — portable job-board rows.
+- `agency.getControlRoomJob` — projected plan, trace tree, artifacts and evidence.
+- `agency.getPublishedSite` — dereferences deployment → microsite artifact data.
+
+The canonical public render schema is [`src/public/types.ts`](../src/public/types.ts).
+An artifact with `kind="microsite"` must store that exact shape in `data`.
+Unverified fields should not appear as customer-facing facts.
 
 ## Worker provider bridge
 

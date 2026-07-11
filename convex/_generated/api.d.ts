@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as agency from "../agency.js";
+import type * as http from "../http.js";
 import type * as jobs from "../jobs.js";
 import type * as seed from "../seed.js";
 import type * as trace from "../trace.js";
@@ -20,6 +22,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  agency: typeof agency;
+  http: typeof http;
   jobs: typeof jobs;
   seed: typeof seed;
   trace: typeof trace;

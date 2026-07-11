@@ -1,4 +1,5 @@
 import { bilingual } from "./llm";
+import { BUSINESS_RESEARCH_SCHEMA } from "./businessResearchContract";
 
 // The specialist roster as DATA. The generic executor (specialist.ts) runs any
 // of these; the orchestrator/manager just names roles. Adding a role here (or,
@@ -76,50 +77,14 @@ function context(args: {
 
 export const ROLES: Record<string, RoleDef> = {
   intake: {
-    name: "Intake & Evidence Specialist",
+    name: "Business Research Specialist",
     artifactKind: "business_facts",
     outputName: "business_facts",
     usesVision: true,
     system:
-      "You are an intake & evidence specialist for a local-business agency. " +
-      "From the provided sources (business record, maps info, photos, operator brief), " +
-      "produce canonical business facts, a source inventory, a list of missing data, " +
-      "and a per-fact confidence score (0-1). Never invent facts you cannot support; " +
-      "mark anything uncertain in missingData.",
-    outputSchema: {
-      type: "object",
-      additionalProperties: false,
-      required: ["canonicalFacts", "sourceInventory", "missingData", "factConfidence"],
-      properties: {
-        canonicalFacts: {
-          type: "object",
-          additionalProperties: false,
-          required: ["name", "category", "address", "phone", "hours", "summary"],
-          properties: {
-            name: { type: "string" },
-            category: { type: "string" },
-            address: { type: ["string", "null"] },
-            phone: { type: ["string", "null"] },
-            hours: { type: ["string", "null"] },
-            summary: { type: "string" },
-          },
-        },
-        sourceInventory: { type: "array", items: { type: "string" } },
-        missingData: { type: "array", items: { type: "string" } },
-        factConfidence: {
-          type: "array",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["fact", "confidence"],
-            properties: {
-              fact: { type: "string" },
-              confidence: { type: "number" },
-            },
-          },
-        },
-      },
-    },
+      "Research the exact business with live evidence. Rank first-party sources above directories, " +
+      "retain fact-level provenance, report conflicts and missing facts, and never invent unsupported claims.",
+    outputSchema: BUSINESS_RESEARCH_SCHEMA,
     buildUser: (a) =>
       `Extract canonical facts for this business.\n\n${context(a)}`,
   },

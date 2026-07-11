@@ -161,3 +161,22 @@ export const retractBusinessDeployments = internalMutation({
     return published.length;
   },
 });
+
+export const escalateTask = internalMutation({
+  args: {
+    jobId: v.id("jobs"),
+    taskId: v.id("tasks"),
+    reason: v.string(),
+  },
+  handler: async (ctx, { jobId, taskId, reason }) => {
+    await ctx.db.patch(taskId, { status: "escalated", blockerReason: reason });
+    await ctx.db.patch(jobId, { status: "escalated", error: reason, finishedAt: Date.now() });
+    return await ctx.db.insert("approvals", {
+      jobId,
+      taskId,
+      type: "escalation",
+      reason,
+      status: "open",
+    });
+  },
+});

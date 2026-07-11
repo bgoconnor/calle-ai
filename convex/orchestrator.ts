@@ -3,6 +3,7 @@ import { api, internal } from "./_generated/api";
 import { v } from "convex/values";
 import { ROLES, PUBLISH_TAIL } from "./agents/roles";
 import { callTool } from "./tools";
+import { prepareMenuGeneratorHandoff } from "./agents/menuEvidence";
 
 // Roles whose artifacts the Manager reviews (and may send back for one revision).
 // Stubbed/derived roles are skipped.
@@ -58,6 +59,30 @@ export const runJob = action({
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
       const taskId = taskIds[i];
+
+      if (step.role === "publisher_qa") {
+        const context = await ctx.runQuery(internal.agents.helpers.getJobContext, { jobId });
+        const normalizedMenu = [...context.artifacts].reverse().find((artifact) => artifact.kind === "normalized_menu")?.data;
+        const testimonials = [...context.artifacts].reverse().find((artifact) => artifact.kind === "menu_testimonials")?.data;
+        const menuSources = [...context.artifacts].reverse().find((artifact) => artifact.kind === "menu_sources")?.data;
+        if (normalizedMenu) {
+          const handoff = prepareMenuGeneratorHandoff(normalizedMenu, testimonials, menuSources);
+          if (!handoff.publishable) {
+            const reason = `Publisher blocked by evidence gate: ${handoff.blockers.map((blocker) => blocker.message).join(" ")}`;
+            await ctx.runMutation(internal.agents.helpers.escalateTask, { jobId, taskId, reason });
+            await callTool(ctx, "trace.emit", {
+              jobId,
+              taskId,
+              parentRole: "Agency Manager",
+              role: "Agency Manager",
+              phase: "review",
+              summary: reason,
+              output: handoff,
+            });
+            return { status: "escalated" };
+          }
+        }
+      }
 
       await callTool(ctx, "trace.emit", {
         jobId,

@@ -6,6 +6,8 @@ import { callStructured } from "./llm";
 import type { Id } from "../_generated/dataModel";
 import { callTool } from "../tools";
 import { runMenuDiscovery, runMenuTestimonials } from "./menuResearch";
+import { runBusinessResearch } from "./businessResearch";
+import { prepareMenuGeneratorHandoff } from "./menuEvidence";
 
 type SpecialistResult =
   | { status: "succeeded"; artifactId: Id<"artifacts"> }
@@ -40,6 +42,17 @@ export const runSpecialist = internalAction({
       kind: a.kind,
       data: a.data,
     }));
+    if (role === "publisher_qa") {
+      const normalizedMenu = [...context.artifacts].reverse().find((a: any) => a.kind === "normalized_menu")?.data;
+      const testimonials = [...context.artifacts].reverse().find((a: any) => a.kind === "menu_testimonials")?.data;
+      const menuSources = [...context.artifacts].reverse().find((a: any) => a.kind === "menu_sources")?.data;
+      if (normalizedMenu) {
+        priorArtifacts.push({
+          kind: "menu_generator_input",
+          data: prepareMenuGeneratorHandoff(normalizedMenu, testimonials, menuSources),
+        });
+      }
+    }
 
     // Discovery is stubbed until Linkup is wired — write an honest placeholder
     // rather than fabricate uncited research.
@@ -90,7 +103,14 @@ export const runSpecialist = internalAction({
       : undefined;
 
     try {
-      const toolRole = role === "menu_discovery"
+      const toolRole = role === "intake"
+        ? await runBusinessResearch(ctx, {
+            jobId,
+            taskId,
+            businessId: context.job.businessId,
+            context: { business: context.business, artifacts: context.artifacts },
+          })
+        : role === "menu_discovery"
         ? await runMenuDiscovery(ctx, {
             jobId,
             taskId,

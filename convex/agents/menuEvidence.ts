@@ -67,12 +67,9 @@ export function validateNormalizedMenu(menu: any, menuSources?: any): MenuBlocke
     message: String(menu?.completenessReason || "The available evidence does not support a complete menu."),
     sourceUrls: [],
   });
-  if (Array.isArray(menu?.conflicts) && menu.conflicts.length > 0) blockers.push({
-    code: "conflicting_sources",
-    message: menu.conflicts.join("; "),
-    sourceUrls: [...new Set((menu?.sections ?? []).flatMap((s: any) =>
-      (s.items ?? []).flatMap((i: any) => i.sourceUrls ?? [])))].filter((url): url is string => typeof url === "string"),
-  });
+  // Conflicts are provenance, not an approval gate. The normalization agent
+  // selects the freshest credible source as canonical and retains older values
+  // here so post-ship feedback can correct the decision without blocking it.
   if (menuSources) {
     const selected = new Set((menuSources.selectedSourceUrls ?? []).map(canonicalUrl).filter(Boolean));
     if (selected.size === 0) blockers.push({

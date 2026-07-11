@@ -69,7 +69,6 @@ export const runJob = action({
           const handoff = prepareMenuGeneratorHandoff(normalizedMenu, testimonials, menuSources);
           if (!handoff.publishable) {
             const reason = `Publisher blocked by evidence gate: ${handoff.blockers.map((blocker) => blocker.message).join(" ")}`;
-            await ctx.runMutation(internal.agents.helpers.escalateTask, { jobId, taskId, reason });
             await callTool(ctx, "trace.emit", {
               jobId,
               taskId,
@@ -79,7 +78,11 @@ export const runJob = action({
               summary: reason,
               output: handoff,
             });
-            return { status: "escalated" };
+            if (approvalMode === "require_approval") {
+              await ctx.runMutation(internal.agents.helpers.escalateTask, { jobId, taskId, reason });
+              return { status: "escalated" };
+            }
+            return await failJob(reason);
           }
         }
       }

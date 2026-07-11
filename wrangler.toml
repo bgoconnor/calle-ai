@@ -1,0 +1,16 @@
+name = "calle-ai-integrations"
+main = "worker/index.ts"
+compatibility_date = "2025-07-18"
+workers_dev = true
+
+[vars]
+DODO_ENABLED = "false"
+ELEVENLABS_TRANSCRIPTION_MODEL = "scribe_v1"
+
+# Set secrets with Wrangler; never commit them:
+# wrangler secret put LINKUP_API_KEY
+# wrangler secret put ELEVENLABS_API_KEY
+# wrangler secret put DODO_API_KEY
+# wrangler secret put DODO_WEBHOOK_SECRET
+# wrangler secret put CONVEX_HTTP_URL
+# wrangler secret put WORKER_WRITE_KEY

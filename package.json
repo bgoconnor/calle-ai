@@ -1,0 +1,32 @@
+{
+  "name": "calle-ai",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --pretty false",
+    "preview": "vite preview",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name calle-ai"
+  },
+  "dependencies": {
+    "convex": "^1.27.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260708.1",
+    "@types/node": "^24.1.0",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.6",
+    "wrangler": "^4.25.1"
+  }
+}

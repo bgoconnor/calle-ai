@@ -19,35 +19,41 @@ export type LinkupSearchOutput = {
 };
 
 const REQUEST_TIMEOUT_MS = 15_000;
+const LINKUP_URL = "https://api.linkup.so/v1/search";
 
-/** Calls Linkup through the integration Worker so its API key stays centralized. */
+/**
+ * Calls Linkup directly from the Convex action, with the key held in Convex env
+ * (`LINKUP_API_KEY`). Convex actions run server-side, so the key never reaches
+ * the browser — no integration Worker needed for this server-to-server lookup.
+ * (The Worker is still used for browser-facing ElevenLabs audio + Dodo webhooks.)
+ */
 export async function linkupSearch(
   _ctx: ToolContext,
   input: LinkupSearchInput,
 ): Promise<LinkupSearchOutput> {
-  const workerUrl =
-    process.env.INTEGRATION_WORKER_URL ??
-    process.env.VITE_INTEGRATION_WORKER_URL;
-  if (!workerUrl) {
-    throw new Error("INTEGRATION_WORKER_URL is not configured");
+  const apiKey = process.env.LINKUP_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "LINKUP_API_KEY is not set. Run: npx convex env set LINKUP_API_KEY <key>",
+    );
   }
 
   const query = input.query.trim();
   if (!query) throw new Error("linkup.search requires a query");
 
-  const response = await fetch(
-    `${workerUrl.replace(/\/$/, "")}/v1/research`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query,
-        jobId: input.jobId,
-        businessId: input.businessId,
-      }),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  const response = await fetch(LINKUP_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({
+      q: query,
+      depth: "standard",
+      outputType: "sourcedAnswer",
+    }),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
 
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 300);
@@ -56,22 +62,23 @@ export async function linkupSearch(
     );
   }
 
-  const payload = (await response.json()) as Partial<LinkupSearchOutput>;
-  if (!Array.isArray(payload.results)) {
-    throw new Error("linkup.search returned an invalid response");
-  }
+  const raw = (await response.json()) as {
+    answer?: unknown;
+    sources?: Array<Record<string, unknown>>;
+  };
+
+  const results = Array.isArray(raw.sources)
+    ? raw.sources.map((source) => ({
+        title: String(source.name ?? source.title ?? "Untitled source"),
+        url: String(source.url ?? ""),
+        snippet: String(source.snippet ?? source.content ?? ""),
+      }))
+    : [];
 
   return {
-    query: typeof payload.query === "string" ? payload.query : query,
-    answer: typeof payload.answer === "string" ? payload.answer : "",
-    results: payload.results.map((result) => ({
-      title: String(result.title ?? "Untitled source"),
-      url: String(result.url ?? ""),
-      snippet: String(result.snippet ?? ""),
-    })),
-    retrievedAt:
-      typeof payload.retrievedAt === "string"
-        ? payload.retrievedAt
-        : new Date().toISOString(),
+    query,
+    answer: typeof raw.answer === "string" ? raw.answer : "",
+    results,
+    retrievedAt: new Date().toISOString(),
   };
 }

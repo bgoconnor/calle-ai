@@ -57,7 +57,7 @@ export function App() {
           <button className={route.kind === "quick" || route.kind === "advanced" ? "active" : ""} onClick={() => navigate("/")}>New job</button>
           <button className={route.kind === "control" ? "active" : ""} onClick={() => navigate("/jobs")}>Control room</button>
           <button className={route.kind === "evals" || route.kind === "dev-evals" ? "active" : ""} onClick={() => navigate("/evals")}>Agent lab</button>
-          <a href="/b/yucatasia">Demo storefront ↗</a>
+          <a href="/b/chely-s-beauty-salon">Live storefront ↗</a>
         </nav>
       </header>
 

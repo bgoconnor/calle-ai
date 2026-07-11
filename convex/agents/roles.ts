@@ -221,7 +221,7 @@ export const ROLES: Record<string, RoleDef> = {
     outputSchema: {
       type: "object",
       additionalProperties: false,
-      required: ["highlights", "searchesRun", "stopReason"],
+      required: ["highlights", "searchesRun", "stopReason", "searchEvidence"],
       properties: {
         highlights: {
           type: "array",
@@ -242,6 +242,28 @@ export const ROLES: Record<string, RoleDef> = {
         },
         searchesRun: { type: "number" },
         stopReason: { type: "string", enum: ["target_reached", "candidates_exhausted", "search_budget_reached"] },
+        searchEvidence: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["menuItemId", "query", "answer", "sources"],
+            properties: {
+              menuItemId: { type: "string" },
+              query: { type: "string" },
+              answer: { type: "string" },
+              sources: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["title", "url", "snippet"],
+                  properties: { title: { type: "string" }, url: { type: "string" }, snippet: { type: "string" } },
+                },
+              },
+            },
+          },
+        },
       },
     },
     buildUser: (a) => `Select only verified direct testimonials from live review evidence.\n\n${context(a)}`,

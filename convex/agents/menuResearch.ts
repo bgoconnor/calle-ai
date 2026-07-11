@@ -122,6 +122,7 @@ export async function runMenuTestimonials(
   let completionTokens = 0;
   let model = "";
   let searchesRun = 0;
+  const searchEvidence: Array<{ menuItemId: string; query: string; answer: string; sources: typeof highlights }> = [];
 
   for (const item of candidates) {
     if (highlights.length >= 4) break;
@@ -132,6 +133,12 @@ export async function runMenuTestimonials(
       businessId: args.businessId,
     });
     searchesRun += 1;
+    searchEvidence.push({
+      menuItemId: String(item.id),
+      query,
+      answer: search.answer,
+      sources: search.results,
+    });
     await callTool(ctx, "trace.emit", {
       jobId: args.jobId,
       taskId: args.taskId,
@@ -189,6 +196,7 @@ export async function runMenuTestimonials(
       highlights,
       searchesRun,
       stopReason: highlights.length >= 4 ? "target_reached" : "candidates_exhausted",
+      searchEvidence,
     },
     citations,
     model,

@@ -25,7 +25,9 @@ const CASES = [
   { name: "missing_authoritative_source", menu: completeMenu, sources: { selectedSourceUrls: [] }, expected: false },
   { name: "unsupported_item_source", menu: completeMenu, sources: { selectedSourceUrls: ["https://other.example/menu"] }, expected: false },
   { name: "incomplete_menu", menu: { ...completeMenu, likelyComplete: false, completenessReason: "Only one menu image was found." }, sources: authoritativeSources, expected: false },
-  { name: "conflicting_prices", menu: { ...completeMenu, conflicts: ["Cochinita Pibil is listed at two prices."] }, sources: authoritativeSources, expected: false },
+  // A recorded conflict is publishable once the manager selects the freshest
+  // credible value; provenance enables correction without a human gate.
+  { name: "conflicting_prices", menu: { ...completeMenu, conflicts: ["Cochinita Pibil is listed at two prices."] }, sources: authoritativeSources, expected: true },
   { name: "unstable_duplicate_ids", menu: { ...completeMenu, sections: [{ ...completeMenu.sections[0], items: [{ ...completeMenu.sections[0].items[0], id: "mains" }] }] }, sources: authoritativeSources, expected: false },
 ];
 

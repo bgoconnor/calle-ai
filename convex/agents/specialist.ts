@@ -13,6 +13,57 @@ type SpecialistResult =
   | { status: "succeeded"; artifactId: Id<"artifacts"> }
   | { status: "failed"; error: string };
 
+function compactArtifactForPrompt(kind: string, data: any) {
+  if (kind === "printable_menu_pdf") {
+    const { dataUrl: _dataUrl, ...metadata } = data ?? {};
+    return metadata;
+  }
+  if (kind === "business_facts") {
+    return {
+      canonicalFacts: data?.canonicalFacts,
+      handoff: data?.handoff,
+      conflicts: data?.conflicts,
+      missingFacts: data?.missingFacts,
+      sources: (data?.sources ?? []).slice(0, 12).map((source: any) => ({
+        title: source.title,
+        url: source.url,
+        sourceType: source.sourceType,
+        authority: source.authority,
+        snippet: String(source.snippet ?? "").slice(0, 800),
+      })),
+      visualEvidence: (data?.visualEvidence ?? [])
+        .slice(0, 12)
+        .map((image: any) => ({ title: image.title, url: image.url })),
+    };
+  }
+  if (kind === "menu_sources") {
+    return {
+      sources: (data?.sources ?? []).map((source: any) => ({
+        ...source,
+        snippet: String(source.snippet ?? "").slice(0, 1200),
+      })),
+      selectedSourceUrls: data?.selectedSourceUrls,
+      canonicalSourceUrl: data?.canonicalSourceUrl,
+      recencyRationale: data?.recencyRationale,
+      status: data?.status,
+      blockers: data?.blockers,
+      pageEvidence: (data?.pageEvidence ?? []).slice(0, 4).map((page: any) => ({
+        url: page.url,
+        retrievedAt: page.retrievedAt,
+        markdown: String(page.markdown ?? "").slice(0, 8_000),
+      })),
+      imageEvidence: (data?.imageEvidence ?? [])
+        .slice(0, 12)
+        .map((image: any) => ({
+          title: image.title ?? image.alt,
+          url: image.url,
+          sourceUrl: image.sourceUrl,
+        })),
+    };
+  }
+  return data;
+}
+
 // The ONE generic specialist executor. Runs any role from the roster:
 // loads job context, builds the prompt from business + policies + prior
 // artifacts (the handoff), calls the model with the role's output schema,
@@ -44,9 +95,12 @@ export const runSpecialist = internalAction({
         jobId,
       },
     );
-    const priorArtifacts = context.artifacts.map((a: any) => ({
+    const latestArtifacts = new Map<string, any>();
+    for (const artifact of context.artifacts)
+      latestArtifacts.set(artifact.kind, artifact);
+    const priorArtifacts = [...latestArtifacts.values()].map((a: any) => ({
       kind: a.kind,
-      data: a.data,
+      data: compactArtifactForPrompt(a.kind, a.data),
     }));
     if (role === "pdf_menu") {
       try {

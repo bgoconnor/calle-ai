@@ -10,8 +10,6 @@ type QuickIntakeProps = {
   onAdvanced?: () => void;
 };
 
-const example = "Yucatasia";
-
 export function QuickIntake({ adapter, onLaunched, onAdvanced }: QuickIntakeProps) {
   const client = useMemo(() => adapter ?? createMockIntakeAdapter(), [adapter]);
   const [brief, setBrief] = useState("");
@@ -76,7 +74,6 @@ export function QuickIntake({ adapter, onLaunched, onAdvanced }: QuickIntakeProp
 
         {error && <p className="quick-error" role="alert">{error}</p>}
         <label className="quick-approval"><input type="checkbox" checked={requireApproval} onChange={(event) => setRequireApproval(event.target.checked)} /><span>Require approval before publishing</span></label>
-        <button className="quick-example" onClick={() => setBrief(example)}>Try an example</button>
         {onAdvanced && <button className="quick-advanced" onClick={onAdvanced}>Add sources and detailed requirements</button>}
 
         <div className="quick-process" aria-label="Agency process">

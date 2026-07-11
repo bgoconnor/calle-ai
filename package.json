@@ -1,8 +1,8 @@
 {
   "name": "calle-ai",
+  "version": "1.0.0",
+  "description": "Calle AI — an AI-operated local-presence agency (Hermes Buildathon). Multi-agent system that publishes bilingual local-business presence packs.",
   "private": true,
-  "version": "0.1.0",
-  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -14,6 +14,18 @@
     "worker:deploy": "wrangler deploy",
     "deploy": "npm run build && wrangler pages deploy dist --project-name calle-ai"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bgoconnor/calle-ai.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/bgoconnor/calle-ai/issues"
+  },
+  "homepage": "https://github.com/bgoconnor/calle-ai#readme",
   "dependencies": {
     "convex": "^1.42.1",
     "react": "^19.1.1",

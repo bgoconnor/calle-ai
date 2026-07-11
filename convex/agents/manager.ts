@@ -1,8 +1,9 @@
 import { internalAction } from "../_generated/server";
-import { internal, api } from "../_generated/api";
+import { internal } from "../_generated/api";
 import { v } from "convex/values";
 import { ROLES, CONTENT_ROLES } from "./roles";
 import { callStructured } from "./llm";
+import { callTool } from "../tools";
 
 // The Agency Manager. Dynamically plans the CONTENT phase per job (so a
 // restaurant and a salon get different plans), and reviews each artifact before
@@ -84,7 +85,7 @@ export const planJob = internalAction({
 
     const steps = llm.data.steps.filter((s) => CONTENT_ROLES.includes(s.role));
 
-    await ctx.runMutation(api.trace.emitTrace, {
+    await callTool(ctx, "trace.emit", {
       jobId,
       role: "Agency Manager",
       phase: "plan",
@@ -150,7 +151,7 @@ export const reviewArtifact = internalAction({
       schema: REVIEW_SCHEMA,
     });
 
-    await ctx.runMutation(api.trace.emitTrace, {
+    await callTool(ctx, "trace.emit", {
       jobId,
       taskId,
       parentRole: "Agency Manager",

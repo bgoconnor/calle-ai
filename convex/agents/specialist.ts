@@ -1,9 +1,10 @@
 import { internalAction } from "../_generated/server";
-import { internal, api } from "../_generated/api";
+import { internal } from "../_generated/api";
 import { v } from "convex/values";
 import { ROLES } from "./roles";
 import { callStructured } from "./llm";
 import type { Id } from "../_generated/dataModel";
+import { callTool } from "../tools";
 
 type SpecialistResult =
   | { status: "succeeded"; artifactId: Id<"artifacts"> }
@@ -64,7 +65,7 @@ export const runSpecialist = internalAction({
         outputArtifactId: artifactId,
         durationMs: Date.now() - start,
       });
-      await ctx.runMutation(api.trace.emitTrace, {
+      await callTool(ctx, "trace.emit", {
         jobId,
         taskId,
         parentRole: "Agency Manager",
@@ -122,7 +123,7 @@ export const runSpecialist = internalAction({
         outputArtifactId: artifactId,
         durationMs,
       });
-      await ctx.runMutation(api.trace.emitTrace, {
+      await callTool(ctx, "trace.emit", {
         jobId,
         taskId,
         parentRole: "Agency Manager",
@@ -144,7 +145,7 @@ export const runSpecialist = internalAction({
         blockerReason: message,
         durationMs: Date.now() - start,
       });
-      await ctx.runMutation(api.trace.emitTrace, {
+      await callTool(ctx, "trace.emit", {
         jobId,
         taskId,
         role: roleDef.name,

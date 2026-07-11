@@ -1,7 +1,8 @@
 import { action } from "./_generated/server";
-import { internal, api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { ROLES, PUBLISH_TAIL } from "./agents/roles";
+import { callTool } from "./tools";
 
 // Roles whose artifacts the Manager reviews (and may send back for one revision).
 // Stubbed/derived roles are skipped.
@@ -47,7 +48,7 @@ export const runJob = action({
       const step = steps[i];
       const taskId = taskIds[i];
 
-      await ctx.runMutation(api.trace.emitTrace, {
+      await callTool(ctx, "trace.emit", {
         jobId,
         taskId,
         parentRole: "Agency Manager",
@@ -107,7 +108,7 @@ export const runJob = action({
       status: "completed",
       finishedAt: Date.now(),
     });
-    await ctx.runMutation(api.trace.emitTrace, {
+    await callTool(ctx, "trace.emit", {
       jobId,
       role: "Publisher & QA Specialist",
       phase: "publish",

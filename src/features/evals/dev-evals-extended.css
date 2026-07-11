@@ -1,0 +1,122 @@
+.dev-inspect {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.dev-inspect input {
+  flex: 1;
+}
+
+.dev-inspect button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  border-radius: 7px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.dev-metrics {
+  max-width: 1500px;
+  margin: 14px auto 0;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.dev-metrics article {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+}
+
+.dev-metrics article:first-child {
+  border-left: 0;
+}
+
+.dev-metrics span {
+  grid-column: 1 / -1;
+  padding: 9px 10px 5px;
+  color: var(--muted);
+  font: 9px ui-monospace, monospace;
+  text-transform: uppercase;
+}
+
+.dev-metrics b {
+  padding: 3px 10px 10px;
+  font-size: 17px;
+}
+
+.dev-metrics b:last-child {
+  color: var(--green);
+}
+
+.dev-history {
+  max-width: 1500px;
+  margin: 24px auto 0;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--panel);
+  padding: 14px;
+}
+
+.dev-history header small {
+  color: var(--green);
+  font: 9px ui-monospace, monospace;
+}
+
+.dev-history h2 {
+  margin: 4px 0 12px;
+  font-size: 15px;
+}
+
+.dev-history > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 90px 2fr 160px;
+  gap: 10px;
+  padding: 10px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.dev-history > button span,
+.dev-history > button time {
+  color: var(--muted);
+}
+
+.dev-history > p {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .dev-metrics {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .dev-metrics article:nth-child(4) {
+    border-left: 0;
+  }
+
+  .dev-history > button {
+    grid-template-columns: 1fr 80px;
+  }
+
+  .dev-history code,
+  .dev-history time {
+    display: none;
+  }
+}

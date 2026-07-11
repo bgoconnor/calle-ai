@@ -9,9 +9,12 @@
  */
 
 import type * as agency from "../agency.js";
+import type * as agents_businessResearch from "../agents/businessResearch.js";
+import type * as agents_businessResearchContract from "../agents/businessResearchContract.js";
 import type * as agents_helpers from "../agents/helpers.js";
 import type * as agents_llm from "../agents/llm.js";
 import type * as agents_manager from "../agents/manager.js";
+import type * as agents_menuEvidence from "../agents/menuEvidence.js";
 import type * as agents_menuResearch from "../agents/menuResearch.js";
 import type * as agents_roles from "../agents/roles.js";
 import type * as agents_specialist from "../agents/specialist.js";
@@ -19,6 +22,7 @@ import type * as evals from "../evals.js";
 import type * as http from "../http.js";
 import type * as jobs from "../jobs.js";
 import type * as orchestrator from "../orchestrator.js";
+import type * as researchEvals from "../researchEvals.js";
 import type * as seed from "../seed.js";
 import type * as tools_citationPersistenceMutations from "../tools/citationPersistenceMutations.js";
 import type * as tools_citationsPersist from "../tools/citationsPersist.js";
@@ -39,9 +43,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   agency: typeof agency;
+  "agents/businessResearch": typeof agents_businessResearch;
+  "agents/businessResearchContract": typeof agents_businessResearchContract;
   "agents/helpers": typeof agents_helpers;
   "agents/llm": typeof agents_llm;
   "agents/manager": typeof agents_manager;
+  "agents/menuEvidence": typeof agents_menuEvidence;
   "agents/menuResearch": typeof agents_menuResearch;
   "agents/roles": typeof agents_roles;
   "agents/specialist": typeof agents_specialist;
@@ -49,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   jobs: typeof jobs;
   orchestrator: typeof orchestrator;
+  researchEvals: typeof researchEvals;
   seed: typeof seed;
   "tools/citationPersistenceMutations": typeof tools_citationPersistenceMutations;
   "tools/citationsPersist": typeof tools_citationsPersist;

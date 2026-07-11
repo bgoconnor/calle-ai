@@ -13,18 +13,22 @@ export function createLiveIntakeAdapter(url: string): IntakeAdapter {
   const client = createAgencyClient(url);
   return {
     async createDraft(input) {
-      if (input.businessName === "Research from brief") {
-        const result = await client.mutation(api.agency.createJobFromPrompt, { prompt: input.brief, sourceUrls: input.sourceUrls, approvalMode: input.approvalMode });
-        return { jobId: result.jobId, structuredBrief: result.structuredBrief };
-      }
-      const result = await client.mutation(api.agency.createJob, input);
+      const result = await client.mutation(api.agency.createJobFromPrompt, {
+        prompt: input.brief,
+        businessName: input.businessName,
+        businessType: input.category,
+        languages: [input.primaryLanguage ?? "es", input.secondaryLanguage ?? "en"],
+        address: input.city,
+        sourceUrls: input.sourceUrls,
+        approvalMode: input.approvalMode,
+      });
       return { jobId: result.jobId, structuredBrief: result.structuredBrief };
     },
     async updateDraft(jobId, input) {
       await client.mutation(api.agency.updateBrief, { jobId: jobId as Id<"jobs">, brief: input.brief, structuredBrief: input.structuredBrief });
     },
     async launch(jobId) {
-      await client.action(api.orchestrator.runJob, { jobId: jobId as Id<"jobs">, publicBaseUrl: window.location.origin });
+      await client.mutation(api.agency.startJob, { jobId: jobId as Id<"jobs">, publicBaseUrl: window.location.origin });
       return { jobId };
     },
   };

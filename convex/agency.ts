@@ -1,6 +1,7 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 const slugify = (value: string) => value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 const titleFor = (kind: string) => kind.split("_").map((word) => word[0]?.toUpperCase() + word.slice(1)).join(" ");
@@ -115,6 +116,15 @@ export const createJobFromPrompt = mutation({
         sourceStrategy: ["Linkup live research", "Operator-provided URLs and assets", "Exception escalation for uncertain facts"],
       },
     };
+  },
+});
+
+/** Queue the long-running agency action and return immediately to the UI. */
+export const startJob = mutation({
+  args: { jobId: v.id("jobs"), publicBaseUrl: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await ctx.scheduler.runAfter(0, api.orchestrator.runJob, args);
+    return { jobId: args.jobId };
   },
 });
 

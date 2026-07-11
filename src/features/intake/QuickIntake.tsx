@@ -10,7 +10,7 @@ type QuickIntakeProps = {
   onAdvanced?: () => void;
 };
 
-const example = "Build a Spanish-first bilingual microsite for Yucatasia in San Francisco. Research the business and its menu, preserve Yucatán dish names, and explain them clearly in English.";
+const example = "Yucatasia";
 
 export function QuickIntake({ adapter, onLaunched, onAdvanced }: QuickIntakeProps) {
   const client = useMemo(() => adapter ?? createMockIntakeAdapter(), [adapter]);
@@ -20,8 +20,8 @@ export function QuickIntake({ adapter, onLaunched, onAdvanced }: QuickIntakeProp
   const [requireApproval, setRequireApproval] = useState(false);
 
   const submit = async () => {
-    if (brief.trim().length < 20) {
-      setError("Add a little more detail so the agency knows what to research and build.");
+    if (brief.trim().length < 2) {
+      setError("Enter a restaurant name or Google Maps URL.");
       return;
     }
 
@@ -30,9 +30,9 @@ export function QuickIntake({ adapter, onLaunched, onAdvanced }: QuickIntakeProp
     try {
       const draft = await client.createDraft({
         brief: brief.trim(),
-        businessName: "Research from brief",
+        businessName: brief.trim(),
         city: "Research from brief",
-        category: "Local business",
+        category: "restaurant",
         primaryLanguage: "es",
         secondaryLanguage: "en",
         approvalMode: requireApproval ? "require_approval" : "autonomous",
@@ -51,8 +51,8 @@ export function QuickIntake({ adapter, onLaunched, onAdvanced }: QuickIntakeProp
       <section className="quick-intake">
         <div className="quick-mark" aria-hidden="true">✦</div>
         <p className="quick-eyebrow">AI local-presence agency</p>
-        <h1>What should we build?</h1>
-        <p className="quick-subtitle">Name the business and the outcome. Our agents research the rest.</p>
+        <h1>Which restaurant?</h1>
+        <p className="quick-subtitle">Enter a name or Maps URL. The agency researches, builds, and publishes the rest.</p>
 
         <div className="quick-composer">
           <textarea
@@ -63,8 +63,8 @@ export function QuickIntake({ adapter, onLaunched, onAdvanced }: QuickIntakeProp
             onKeyDown={(event) => {
               if ((event.metaKey || event.ctrlKey) && event.key === "Enter") void submit();
             }}
-            placeholder="Build a bilingual microsite for…"
-            rows={5}
+            placeholder="Yucatasia"
+            rows={2}
           />
           <div className="quick-composer-footer">
             <span>Researches public sources with Linkup</span>

@@ -104,7 +104,10 @@ function rankSource(
 
 function businessDescriptor(context: ResearchContext): string {
   const business = context.business;
-  return [business?.name, business?.type, business?.address].filter(Boolean).join(", ");
+  const prompt = context.artifacts.find((artifact) => artifact.kind === "brief")?.data as { prompt?: unknown } | undefined;
+  const placeholder = /^(business pending research|research from brief)$/i.test(business?.name?.trim() ?? "");
+  const identity = placeholder && typeof prompt?.prompt === "string" ? prompt.prompt.trim() : business?.name;
+  return [identity, business?.type, business?.address].filter(Boolean).join(", ");
 }
 
 type SearchPattern = {
@@ -117,7 +120,7 @@ type SearchPattern = {
 
 function buildQueries(context: ResearchContext): SearchPattern[] {
   const descriptor = businessDescriptor(context);
-  const exactName = context.business?.name?.trim() ?? descriptor;
+  const exactName = descriptor.split(",")[0]?.trim() || descriptor;
   const address = context.business?.address?.trim() ?? "";
   const suppliedUrls = [
     context.business?.mapsUrl,
@@ -213,7 +216,7 @@ export async function runBusinessResearch(
     context: ResearchContext;
   },
 ): Promise<BusinessResearchResult> {
-  if (!args.context.business?.name?.trim()) throw new Error("Business research requires a business name");
+  if (!businessDescriptor(args.context)) throw new Error("Business research requires a business identity prompt");
 
   const searches: LinkupSearchOutput[] = [];
   for (const pattern of buildQueries(args.context)) {
@@ -257,7 +260,7 @@ export async function runBusinessResearch(
     }
   }
 
-  const sources = uniqueRankedSources(searches, args.context.business.name);
+  const sources = uniqueRankedSources(searches, businessDescriptor(args.context).split(",")[0]);
   for (const source of sources.filter((candidate) =>
     candidate.sourceType === "official_website" || candidate.sourceType === "booking_or_ordering").slice(0, 3)) {
     const started = Date.now();
@@ -295,6 +298,7 @@ export async function runBusinessResearch(
   const llm = await callStructured<BusinessResearchOutput>({
     system:
       "You are the initial business research specialist for a local-presence agency. Resolve the exact business identity before extracting facts. " +
+      "The operator brief is the identity request when the business record contains placeholder text; never treat placeholder text as the business name. " +
       "Use only the supplied evidence. First-party and government evidence outrank profiles and directories; search rank never establishes authority. " +
       "Every non-missing fact must cite one or more supplied source URLs. Report disagreements as conflicts, never silently choose a convenient value. " +
       "Do not infer languages, amenities, services, pricing, awards, popularity, ownership, or cultural identity. " +
